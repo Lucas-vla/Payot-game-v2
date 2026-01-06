@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import './MainMenu.css'
 
-function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer }) {
+function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiError, isLoading }) {
   const [showJoinForm, setShowJoinForm] = useState(false)
   const [roomCode, setRoomCode] = useState('')
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('playerName') || '')
   const [error, setError] = useState('')
 
-  const handleJoinSubmit = (e) => {
+  const handleJoinSubmit = async (e) => {
     e.preventDefault()
     if (!playerName.trim()) {
       setError('Veuillez entrer un pseudo')
@@ -18,8 +18,11 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer }) {
       return
     }
     setError('')
-    onJoinMultiplayer(roomCode.trim().toUpperCase(), playerName.trim())
+    await onJoinMultiplayer(roomCode.trim().toUpperCase(), playerName.trim())
   }
+
+  // Afficher l'erreur locale ou l'erreur de l'API
+  const displayError = error || apiError
 
   return (
     <div className="main-menu">
@@ -107,10 +110,10 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer }) {
                 />
               </div>
 
-              {error && <div className="form-error">{error}</div>}
+              {displayError && <div className="form-error">{displayError}</div>}
 
-              <button type="submit" className="submit-btn">
-                Rejoindre la partie
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? 'Connexion...' : 'Rejoindre la partie'}
               </button>
             </form>
           </div>

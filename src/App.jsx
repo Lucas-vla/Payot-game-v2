@@ -94,6 +94,8 @@ function AppContent() {
           onPlayVsBot={handlePlayVsBot}
           onCreateMultiplayer={handleCreateMultiplayer}
           onJoinMultiplayer={handleJoinMultiplayer}
+          apiError={multiplayer.error}
+          isLoading={multiplayer.isLoading}
         />
       )
 
