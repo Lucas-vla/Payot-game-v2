@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
+import Rules from './Rules'
 import './MainMenu.css'
 
 function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiError, isLoading }) {
   const [showJoinForm, setShowJoinForm] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [roomCode, setRoomCode] = useState('')
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('playerName') || '')
   const [error, setError] = useState('')
@@ -26,6 +28,8 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
 
   return (
     <div className="main-menu">
+      {showRules && <Rules onClose={() => setShowRules(false)} />}
+
       <div className="menu-container">
         {/* Logo */}
         <div className="menu-logo">
@@ -71,6 +75,9 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
                 <li>🎲 Le dé désigne la couleur <strong>Papayoo</strong> dont le 7 vaut 40 pts</li>
                 <li>🏆 Le joueur avec le <strong>moins de points</strong> gagne!</li>
               </ul>
+              <button className="rules-link-btn" onClick={() => setShowRules(true)}>
+                📖 Lire les règles complètes
+              </button>
             </div>
           </>
         ) : (
