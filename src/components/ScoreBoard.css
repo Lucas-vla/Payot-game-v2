@@ -1,0 +1,137 @@
+.scoreboard {
+  background: linear-gradient(145deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.scoreboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scoreboard-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.round-indicator {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.score-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.score-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.score-item.is-human {
+  background: rgba(57, 73, 171, 0.2);
+  border-color: rgba(57, 73, 171, 0.3);
+}
+
+.score-item.is-leader {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 143, 0, 0.1));
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.score-rank {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.score-item.is-leader .score-rank {
+  background: transparent;
+  font-size: 18px;
+}
+
+.score-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.score-name {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score-breakdown {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  display: block;
+  margin-top: 2px;
+}
+
+.score-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffd700;
+  min-width: 40px;
+  text-align: right;
+}
+
+.score-item.is-leader .score-value {
+  color: #ffd700;
+}
+
+/* Animation d'entrée */
+.score-item {
+  animation: slideIn 0.3s ease backwards;
+}
+
+.score-item:nth-child(1) { animation-delay: 0s; }
+.score-item:nth-child(2) { animation-delay: 0.05s; }
+.score-item:nth-child(3) { animation-delay: 0.1s; }
+.score-item:nth-child(4) { animation-delay: 0.15s; }
+.score-item:nth-child(5) { animation-delay: 0.2s; }
+.score-item:nth-child(6) { animation-delay: 0.25s; }
+.score-item:nth-child(7) { animation-delay: 0.3s; }
+.score-item:nth-child(8) { animation-delay: 0.35s; }
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+

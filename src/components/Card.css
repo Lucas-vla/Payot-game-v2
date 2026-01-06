@@ -1,0 +1,186 @@
+.card {
+  width: 65px;
+  height: 95px;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border-radius: 8px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 3px 5px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  user-select: none;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.card-small {
+  width: 50px;
+  height: 72px;
+}
+
+.card:hover:not(.not-playable) {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow:
+    0 20px 25px rgba(0, 0, 0, 0.15),
+    0 10px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card.draggable {
+  cursor: grab;
+}
+
+.card.draggable:active {
+  cursor: grabbing;
+}
+
+.card.selected {
+  transform: translateY(-20px) scale(1.05);
+  box-shadow:
+    0 25px 30px rgba(0, 0, 0, 0.2),
+    0 0 0 3px #ffd700,
+    0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.card.not-playable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(30%);
+}
+
+.card.not-playable:hover {
+  transform: none;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Style Payoo spécial */
+.card.is-payoo {
+  background: linear-gradient(145deg, #f3e5f5, #e1bee7);
+  border: 1px solid rgba(156, 39, 176, 0.3);
+}
+
+/* Dos de carte */
+.card-back {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-back-design {
+  width: 80%;
+  height: 85%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 5px,
+    rgba(255, 255, 255, 0.03) 5px,
+    rgba(255, 255, 255, 0.03) 10px
+  );
+}
+
+.card-back-inner {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffd700, #ff8f00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.card-back-inner span {
+  font-size: 28px;
+  color: #1a237e;
+}
+
+.card-small .card-back-inner {
+  width: 35px;
+  height: 35px;
+}
+
+.card-small .card-back-inner span {
+  font-size: 20px;
+}
+
+/* Coins de la carte */
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--suit-color);
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.top-left {
+  top: 5px;
+  left: 6px;
+}
+
+.bottom-right {
+  bottom: 5px;
+  right: 6px;
+  transform: rotate(180deg);
+}
+
+.card-value {
+  font-size: 14px;
+  line-height: 1;
+  font-family: 'Georgia', serif;
+}
+
+.card-small .card-value {
+  font-size: 11px;
+}
+
+.card-suit {
+  font-size: 12px;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.card-small .card-suit {
+  font-size: 9px;
+}
+
+/* Centre de la carte */
+.card-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.card-suit-large {
+  font-size: 32px;
+  color: var(--suit-color);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-small .card-suit-large {
+  font-size: 22px;
+}
+
+/* Animation de drag */
+.card[draggable="true"]:active {
+  opacity: 0.8;
+  transform: scale(1.1) rotate(5deg);
+}
+

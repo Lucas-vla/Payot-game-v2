@@ -1,0 +1,65 @@
+.hand {
+  display: flex;
+  justify-content: center;
+  padding: 8px 30px 12px;
+  min-height: 115px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.4) 100%);
+  border-radius: 15px 15px 0 0;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.hand.active {
+  background: linear-gradient(180deg, rgba(46, 125, 50, 0.2) 0%, rgba(46, 125, 50, 0.4) 100%);
+  border-top: 2px solid rgba(76, 175, 80, 0.5);
+  box-shadow: 0 -4px 15px rgba(76, 175, 80, 0.15);
+}
+
+.hand-cards {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  position: relative;
+  perspective: 1000px;
+}
+
+.hand-card {
+  margin: 0 -18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: bottom center;
+}
+
+.hand-card:hover {
+  z-index: 100;
+  margin: 0 3px;
+}
+
+/* Animation d'éventail pour les cartes */
+.hand-cards .hand-card {
+  transform: rotate(calc((var(--index) - var(--total) / 2 + 0.5) * 2.5deg));
+}
+
+.hand-cards .hand-card:hover {
+  transform: rotate(0deg) translateY(-8px);
+}
+
+@media (max-width: 1024px) {
+  .hand {
+    padding: 15px 20px;
+    min-height: 150px;
+  }
+
+  .hand-card {
+    margin: 0 -25px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hand-card {
+    margin: 0 -30px;
+  }
+
+  .hand-cards .hand-card {
+    transform: rotate(calc((var(--index) - var(--total) / 2 + 0.5) * 2deg));
+  }
+}
+

@@ -1,0 +1,299 @@
+.lobby {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(ellipse at top, rgba(57, 73, 171, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(26, 35, 126, 0.3) 0%, transparent 50%),
+    linear-gradient(180deg, #0d1421 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+.lobby-container {
+  background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  backdrop-filter: blur(20px);
+  padding: 40px 50px;
+  border-radius: 30px;
+  max-width: 550px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.leave-btn {
+  background: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  padding: 0;
+  margin-bottom: 25px;
+  display: inline-block;
+  transition: color 0.2s ease;
+}
+
+.leave-btn:hover {
+  color: #ff6b6b;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Code de la partie */
+.room-code-section {
+  text-align: center;
+  margin-bottom: 35px;
+  padding: 25px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-code-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 15px;
+}
+
+.room-code-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.room-code {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  font-family: monospace;
+  background: linear-gradient(135deg, #ffd700, #ff8f00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.copy-btn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: none;
+}
+
+.share-btn {
+  padding: 12px 25px;
+  border-radius: 25px;
+  background: linear-gradient(135deg, rgba(57, 73, 171, 0.4), rgba(26, 35, 126, 0.3));
+  color: white;
+  font-size: 14px;
+  border: 1px solid rgba(57, 73, 171, 0.4);
+  transition: all 0.2s ease;
+}
+
+.share-btn:hover {
+  background: linear-gradient(135deg, rgba(57, 73, 171, 0.6), rgba(26, 35, 126, 0.4));
+  transform: translateY(-2px);
+}
+
+/* Liste des joueurs */
+.players-section {
+  margin-bottom: 30px;
+}
+
+.players-section h3 {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 15px;
+}
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 15px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.player-item.is-you {
+  background: rgba(57, 73, 171, 0.2);
+  border-color: rgba(57, 73, 171, 0.3);
+}
+
+.player-item.ready {
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.player-item.empty {
+  opacity: 0.5;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.player-avatar {
+  width: 45px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.player-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.you-badge {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+.player-status {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ready-indicator {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.ready-indicator.ready {
+  background: rgba(76, 175, 80, 0.3);
+  color: #4caf50;
+}
+
+.add-bot-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 152, 0, 0.2);
+  color: white;
+  font-size: 14px;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.add-bot-btn:hover {
+  background: rgba(255, 152, 0, 0.4);
+  transform: none;
+}
+
+/* Actions */
+.lobby-actions {
+  margin-bottom: 25px;
+}
+
+.ready-btn {
+  width: 100%;
+  padding: 18px 30px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(57, 73, 171, 0.4), rgba(26, 35, 126, 0.3));
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  border: 2px solid rgba(57, 73, 171, 0.4);
+  transition: all 0.3s ease;
+}
+
+.ready-btn:hover {
+  background: linear-gradient(135deg, rgba(57, 73, 171, 0.6), rgba(26, 35, 126, 0.4));
+  transform: translateY(-2px);
+}
+
+.ready-btn.is-ready {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.4), rgba(46, 125, 50, 0.3));
+  border-color: rgba(76, 175, 80, 0.5);
+}
+
+.start-btn {
+  width: 100%;
+  padding: 18px 30px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #4caf50, #2e7d32);
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+}
+
+.start-btn:hover:not(.disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(76, 175, 80, 0.4);
+}
+
+.start-btn.disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Tips */
+.lobby-tips {
+  text-align: center;
+}
+
+.lobby-tips p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 8px 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .lobby-container {
+    padding: 30px 25px;
+  }
+
+  .room-code {
+    font-size: 32px;
+    letter-spacing: 5px;
+  }
+
+  .room-code-display {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
