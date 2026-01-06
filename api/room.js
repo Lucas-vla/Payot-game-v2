@@ -1,62 +1,88 @@
-// Stockage en mémoire pour les rooms (alternative simple sans base de données)
-// Note: En production avec plusieurs instances, utiliser Vercel KV ou une base de données
+import { Redis } from '@upstash/redis'
 
-const rooms = new Map();
+// Initialiser Redis (utilise les variables d'environnement UPSTASH_REDIS_REST_URL et UPSTASH_REDIS_REST_TOKEN)
+let redis = null
+try {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  }
+} catch (e) {
+  console.log('Redis not configured, using in-memory fallback')
+}
 
-// Nettoyer les rooms expirées (plus de 2 heures)
-function cleanExpiredRooms() {
-  const now = Date.now();
-  const TWO_HOURS = 2 * 60 * 60 * 1000;
+// Fallback en mémoire si Redis n'est pas configuré
+const memoryRooms = new Map()
 
-  for (const [code, room] of rooms.entries()) {
-    if (now - room.createdAt > TWO_HOURS) {
-      rooms.delete(code);
-    }
+// Fonctions d'accès aux données (avec fallback mémoire)
+async function getRoom(code) {
+  if (redis) {
+    const room = await redis.get(`room:${code}`)
+    return room
+  }
+  return memoryRooms.get(code)
+}
+
+async function setRoom(code, room) {
+  if (redis) {
+    // Expire après 24 heures
+    await redis.set(`room:${code}`, room, { ex: 86400 })
+  } else {
+    memoryRooms.set(code, room)
+  }
+}
+
+async function deleteRoom(code) {
+  if (redis) {
+    await redis.del(`room:${code}`)
+  } else {
+    memoryRooms.delete(code)
   }
 }
 
 // Générer un code de room unique
 function generateRoomCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
   for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  return code;
+  return code
 }
 
 export default async function handler(req, res) {
   // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(200).end()
   }
 
-  // Nettoyer les rooms expirées
-  cleanExpiredRooms();
-
-  const { action } = req.query;
+  const { action } = req.query
 
   try {
     switch (action) {
       case 'create': {
         if (req.method !== 'POST') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { hostName, playerCount, hostId } = req.body;
+        const { hostName, playerCount, hostId } = req.body
 
         if (!hostName || !playerCount || !hostId) {
-          return res.status(400).json({ error: 'Missing required fields' });
+          return res.status(400).json({ error: 'Missing required fields' })
         }
 
-        let roomCode = generateRoomCode();
+        let roomCode = generateRoomCode()
         // S'assurer que le code est unique
-        while (rooms.has(roomCode)) {
-          roomCode = generateRoomCode();
+        let existingRoom = await getRoom(roomCode)
+        while (existingRoom) {
+          roomCode = generateRoomCode()
+          existingRoom = await getRoom(roomCode)
         }
 
         const room = {
@@ -73,44 +99,45 @@ export default async function handler(req, res) {
           status: 'waiting',
           createdAt: Date.now(),
           lastActivity: Date.now()
-        };
+        }
 
-        rooms.set(roomCode, room);
+        await setRoom(roomCode, room)
 
-        return res.status(200).json({ success: true, room });
+        return res.status(200).json({ success: true, room })
       }
 
       case 'join': {
         if (req.method !== 'POST') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode, playerName, playerId } = req.body;
+        const { roomCode, playerName, playerId } = req.body
 
         if (!roomCode || !playerName || !playerId) {
-          return res.status(400).json({ error: 'Missing required fields' });
+          return res.status(400).json({ error: 'Missing required fields' })
         }
 
-        const code = roomCode.toUpperCase().trim();
-        const room = rooms.get(code);
+        const code = roomCode.toUpperCase().trim()
+        const room = await getRoom(code)
 
         if (!room) {
-          return res.status(404).json({ error: 'Partie introuvable. Vérifiez le code.' });
+          return res.status(404).json({ error: 'Partie introuvable. Vérifiez le code.' })
         }
 
         if (room.status !== 'waiting') {
-          return res.status(400).json({ error: 'Cette partie a déjà commencé.' });
+          return res.status(400).json({ error: 'Cette partie a déjà commencé.' })
         }
 
         if (room.players.length >= room.playerCount) {
-          return res.status(400).json({ error: 'Cette partie est complète.' });
+          return res.status(400).json({ error: 'Cette partie est complète.' })
         }
 
         // Vérifier si le joueur est déjà dans la partie
-        const existingPlayer = room.players.find(p => p.id === playerId);
+        const existingPlayer = room.players.find(p => p.id === playerId)
         if (existingPlayer) {
-          room.lastActivity = Date.now();
-          return res.status(200).json({ success: true, room, reconnected: true });
+          room.lastActivity = Date.now()
+          await setRoom(code, room)
+          return res.status(200).json({ success: true, room, reconnected: true })
         }
 
         // Ajouter le nouveau joueur
@@ -120,158 +147,164 @@ export default async function handler(req, res) {
           isHost: false,
           isReady: false,
           isBot: false
-        });
-        room.lastActivity = Date.now();
+        })
+        room.lastActivity = Date.now()
+        await setRoom(code, room)
 
-        return res.status(200).json({ success: true, room });
+        return res.status(200).json({ success: true, room })
       }
 
       case 'leave': {
         if (req.method !== 'POST') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode, playerId } = req.body;
-        const code = roomCode?.toUpperCase().trim();
-        const room = rooms.get(code);
+        const { roomCode, playerId } = req.body
+        const code = roomCode?.toUpperCase().trim()
+        const room = await getRoom(code)
 
         if (!room) {
-          return res.status(200).json({ success: true });
+          return res.status(200).json({ success: true })
         }
 
-        const playerIndex = room.players.findIndex(p => p.id === playerId);
+        const playerIndex = room.players.findIndex(p => p.id === playerId)
         if (playerIndex === -1) {
-          return res.status(200).json({ success: true });
+          return res.status(200).json({ success: true })
         }
 
-        const wasHost = room.players[playerIndex].isHost;
-        room.players.splice(playerIndex, 1);
+        const wasHost = room.players[playerIndex].isHost
+        room.players.splice(playerIndex, 1)
 
         if (room.players.length === 0) {
-          rooms.delete(code);
-          return res.status(200).json({ success: true, roomDeleted: true });
+          await deleteRoom(code)
+          return res.status(200).json({ success: true, roomDeleted: true })
         }
 
         // Transférer l'hôte si nécessaire
         if (wasHost && room.players.length > 0) {
-          room.players[0].isHost = true;
-          room.hostId = room.players[0].id;
+          room.players[0].isHost = true
+          room.hostId = room.players[0].id
         }
 
-        room.lastActivity = Date.now();
-        return res.status(200).json({ success: true, room });
+        room.lastActivity = Date.now()
+        await setRoom(code, room)
+        return res.status(200).json({ success: true, room })
       }
 
       case 'ready': {
         if (req.method !== 'POST') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode, playerId, ready } = req.body;
-        const code = roomCode?.toUpperCase().trim();
-        const room = rooms.get(code);
+        const { roomCode, playerId, ready } = req.body
+        const code = roomCode?.toUpperCase().trim()
+        const room = await getRoom(code)
 
         if (!room) {
-          return res.status(404).json({ error: 'Room not found' });
+          return res.status(404).json({ error: 'Room not found' })
         }
 
-        const player = room.players.find(p => p.id === playerId);
+        const player = room.players.find(p => p.id === playerId)
         if (player) {
-          player.isReady = ready;
-          room.lastActivity = Date.now();
+          player.isReady = ready
+          room.lastActivity = Date.now()
+          await setRoom(code, room)
         }
 
-        return res.status(200).json({ success: true, room });
+        return res.status(200).json({ success: true, room })
       }
 
       case 'addBot': {
         if (req.method !== 'POST') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode, playerId } = req.body;
-        const code = roomCode?.toUpperCase().trim();
-        const room = rooms.get(code);
+        const { roomCode, playerId } = req.body
+        const code = roomCode?.toUpperCase().trim()
+        const room = await getRoom(code)
 
         if (!room) {
-          return res.status(404).json({ error: 'Room not found' });
+          return res.status(404).json({ error: 'Room not found' })
         }
 
         if (room.hostId !== playerId) {
-          return res.status(403).json({ error: 'Only host can add bots' });
+          return res.status(403).json({ error: 'Only host can add bots' })
         }
 
         if (room.players.length >= room.playerCount) {
-          return res.status(400).json({ error: 'Room is full' });
+          return res.status(400).json({ error: 'Room is full' })
         }
 
-        const botNumber = room.players.filter(p => p.isBot).length + 1;
+        const botNumber = room.players.filter(p => p.isBot).length + 1
         room.players.push({
           id: `bot-${Date.now()}-${botNumber}`,
           name: `Bot ${botNumber}`,
           isHost: false,
           isReady: true,
           isBot: true
-        });
-        room.lastActivity = Date.now();
+        })
+        room.lastActivity = Date.now()
+        await setRoom(code, room)
 
-        return res.status(200).json({ success: true, room });
+        return res.status(200).json({ success: true, room })
       }
 
       case 'start': {
         if (req.method !== 'POST') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode, playerId } = req.body;
-        const code = roomCode?.toUpperCase().trim();
-        const room = rooms.get(code);
+        const { roomCode, playerId } = req.body
+        const code = roomCode?.toUpperCase().trim()
+        const room = await getRoom(code)
 
         if (!room) {
-          return res.status(404).json({ error: 'Room not found' });
+          return res.status(404).json({ error: 'Room not found' })
         }
 
         if (room.hostId !== playerId) {
-          return res.status(403).json({ error: 'Only host can start the game' });
+          return res.status(403).json({ error: 'Only host can start the game' })
         }
 
         if (room.players.length < 3) {
-          return res.status(400).json({ error: 'Minimum 3 players required' });
+          return res.status(400).json({ error: 'Minimum 3 players required' })
         }
 
         if (!room.players.every(p => p.isReady)) {
-          return res.status(400).json({ error: 'All players must be ready' });
+          return res.status(400).json({ error: 'All players must be ready' })
         }
 
-        room.status = 'playing';
-        room.lastActivity = Date.now();
+        room.status = 'playing'
+        room.lastActivity = Date.now()
+        await setRoom(code, room)
 
-        return res.status(200).json({ success: true, room });
+        return res.status(200).json({ success: true, room })
       }
 
       case 'get': {
         if (req.method !== 'GET') {
-          return res.status(405).json({ error: 'Method not allowed' });
+          return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode } = req.query;
-        const code = roomCode?.toUpperCase().trim();
-        const room = rooms.get(code);
+        const { roomCode } = req.query
+        const code = roomCode?.toUpperCase().trim()
+        const room = await getRoom(code)
 
         if (!room) {
-          return res.status(404).json({ error: 'Room not found' });
+          return res.status(404).json({ error: 'Room not found' })
         }
 
-        room.lastActivity = Date.now();
-        return res.status(200).json({ success: true, room });
+        room.lastActivity = Date.now()
+        await setRoom(code, room)
+        return res.status(200).json({ success: true, room })
       }
 
       default:
-        return res.status(400).json({ error: 'Unknown action' });
+        return res.status(400).json({ error: 'Unknown action' })
     }
   } catch (error) {
-    console.error('Room API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Room API error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }
 
