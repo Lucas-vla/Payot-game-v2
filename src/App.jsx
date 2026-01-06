@@ -54,38 +54,24 @@ function AppContent() {
   }
 
   // Rejoindre une partie
-  const handleJoinMultiplayer = (roomCode, playerName) => {
-    const success = multiplayer.joinRoom(roomCode, playerName)
+  const handleJoinMultiplayer = async (roomCode, playerName) => {
+    const success = await multiplayer.joinRoom(roomCode, playerName)
     if (success) {
       setMode(MODES.LOBBY)
     }
   }
 
   // Créer la room
-  const handleCreateRoom = (hostName, playerCount) => {
-    multiplayer.createRoom(hostName, playerCount)
-    setMode(MODES.LOBBY)
+  const handleCreateRoom = async (hostName, playerCount) => {
+    const code = await multiplayer.createRoom(hostName, playerCount)
+    if (code) {
+      setMode(MODES.LOBBY)
+    }
   }
 
   // Ajouter un bot dans le lobby
   const handleAddBot = () => {
-    const roomInfo = multiplayer.getRoomInfo()
-    if (roomInfo && multiplayer.isHost) {
-      const botNumber = roomInfo.players.filter(p => p.name.startsWith('Bot')).length + 1
-      multiplayer.joinRoom(multiplayer.currentRoom, `Bot ${botNumber}`)
-      // Marquer le bot comme prêt automatiquement
-      setTimeout(() => {
-        const room = multiplayer.getRoomInfo()
-        if (room) {
-          const bot = room.players.find(p => p.name === `Bot ${botNumber}`)
-          if (bot) {
-            bot.isReady = true
-            bot.isBot = true
-            multiplayer.refreshPlayers()
-          }
-        }
-      }, 100)
-    }
+    multiplayer.addBot()
   }
 
   // Lancer la partie multijoueur
@@ -142,6 +128,7 @@ function AppContent() {
           onStartGame={handleStartMultiplayerGame}
           onToggleReady={handleToggleReady}
           onAddBot={handleAddBot}
+          error={multiplayer.error}
         />
       )
 

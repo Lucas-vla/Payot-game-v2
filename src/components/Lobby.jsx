@@ -10,7 +10,8 @@ function Lobby({
   onLeave,
   onStartGame,
   onToggleReady,
-  onAddBot
+  onAddBot,
+  error
 }) {
   const [copied, setCopied] = useState(false)
   const currentPlayer = players.find(p => p.id === currentPlayerId)
@@ -121,6 +122,10 @@ function Lobby({
 
         {/* Actions */}
         <div className="lobby-actions">
+          {error && (
+            <div className="lobby-error">{error}</div>
+          )}
+
           {!isHost && (
             <button
               className={`ready-btn ${isReady ? 'is-ready' : ''}`}
