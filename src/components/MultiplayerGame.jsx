@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useMultiplayer } from '../context/MultiplayerContext'
-import Card from './Card'
-import Die from './Die'
+import { SUIT_DISPLAY } from '../utils/deck'
+import Hand from './Hand'
+import TrickArea from './TrickArea'
 import ScoreBoard from './ScoreBoard'
-import './MultiplayerGame.css'
+import Die from './Die'
+import './GameBoard.css'  // Utiliser le même CSS que GameBoard
 
 const API_BASE = '/api/game'
-const SUIT_DISPLAY = {
-  spade: { symbol: '♠', name: 'Pique', color: '#4a5568' },
-  heart: { symbol: '♥', name: 'Cœur', color: '#e74c3c' },
-  diamond: { symbol: '♦', name: 'Carreau', color: '#f39c12' },
-  club: { symbol: '♣', name: 'Trèfle', color: '#27ae60' },
-  payoo: { symbol: '★', name: 'Payoo', color: '#9b59b6' }
-}
 
 function MultiplayerGame({ onBackToMenu }) {
   const { currentRoom, playerId, roomData } = useMultiplayer()
@@ -63,21 +58,37 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }, [fetchGameState])
 
-  const currentPlayer = game?.players?.find(p => p.id === playerId)
+  // Trouver le joueur actuel
+  const currentPlayerData = game?.players?.find(p => p.id === playerId)
   const currentPlayerIndex = game?.players?.findIndex(p => p.id === playerId) ?? -1
   const isMyTurn = game?.currentPlayer === currentPlayerIndex
 
-  const handleSelectCardToPass = (cardId) => {
-    if (game?.phase !== 'passing') return
-    setSelectedCards(prev => {
-      if (prev.includes(cardId)) return prev.filter(id => id !== cardId)
-      if (prev.length >= game.cardsToPass) return prev
-      return [...prev, cardId]
-    })
+  // Obtenir le nombre de cartes à passer
+  const getCardsToPassCount = (playerCount) => {
+    if (playerCount <= 4) return 5
+    if (playerCount === 5) return 4
+    return 3
   }
 
+  // Sélectionner une carte pour le passage
+  const handleCardClick = (card) => {
+    if (game?.phase === 'passing') {
+      const cardsToPass = getCardsToPassCount(game.playerCount)
+      setSelectedCards(prev => {
+        if (prev.includes(card.id)) return prev.filter(id => id !== card.id)
+        if (prev.length >= cardsToPass) return prev
+        return [...prev, card.id]
+      })
+    } else if (game?.phase === 'playing' && isMyTurn) {
+      handlePlayCard(card.id)
+    }
+  }
+
+  // Confirmer le passage des cartes
   const handleConfirmPass = async () => {
-    if (selectedCards.length !== game?.cardsToPass) return
+    const cardsToPass = getCardsToPassCount(game?.playerCount)
+    if (selectedCards.length !== cardsToPass) return
+
     try {
       await fetch(`${API_BASE}?action=selectCards`, {
         method: 'POST',
@@ -101,6 +112,7 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }
 
+  // Lancer le dé
   const handleRollDie = async (papayooSuit) => {
     try {
       const response = await fetch(`${API_BASE}?action=rollDie`, {
@@ -115,8 +127,23 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }
 
+  // Jouer une carte
   const handlePlayCard = async (cardId) => {
     if (!isMyTurn || game?.phase !== 'playing') return
+
+    // Vérifier si la carte peut être jouée
+    const card = currentPlayerData?.hand?.find(c => c.id === cardId)
+    if (!card) return
+
+    if (game.leadSuit) {
+      const hasLeadSuit = currentPlayerData?.hand?.some(c => c.suit === game.leadSuit)
+      if (hasLeadSuit && card.suit !== game.leadSuit) {
+        setError('Vous devez jouer la couleur demandée!')
+        setTimeout(() => setError(null), 2000)
+        return
+      }
+    }
+
     try {
       const response = await fetch(`${API_BASE}?action=playCard`, {
         method: 'POST',
@@ -135,6 +162,7 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }
 
+  // Collecter le pli
   const handleCollectTrick = async () => {
     try {
       const response = await fetch(`${API_BASE}?action=collectTrick`, {
@@ -149,6 +177,7 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }
 
+  // Nouvelle manche
   const handleNewRound = async () => {
     try {
       const response = await fetch(`${API_BASE}?action=newRound`, {
@@ -163,19 +192,33 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }
 
-  const canPlayCard = (card) => {
-    if (!isMyTurn || game?.phase !== 'playing') return false
-    if (!game.leadSuit) return true
-    const hasLeadSuit = currentPlayer?.hand?.some(c => c.suit === game.leadSuit)
-    if (!hasLeadSuit) return true
-    return card.suit === game.leadSuit
+  // Drop de carte sur le plateau
+  const handleCardDrop = (cardId) => {
+    if (isMyTurn && game?.phase === 'playing') {
+      handlePlayCard(cardId)
+    }
+  }
+
+  // Retour au menu avec confirmation
+  const handleBackToMenuClick = () => {
+    setShowConfirmExit(true)
+  }
+
+  const confirmExit = () => {
+    setShowConfirmExit(false)
+    onBackToMenu()
   }
 
   // Loading
   if (loading) {
     return (
-      <div className="multiplayer-game mp-loading">
-        <div>⏳ Chargement...</div>
+      <div className="game-board setup">
+        <div className="setup-container">
+          <div className="logo">
+            <span className="logo-icon">🎴</span>
+            <h1>Chargement...</h1>
+          </div>
+        </div>
       </div>
     )
   }
@@ -183,10 +226,16 @@ function MultiplayerGame({ onBackToMenu }) {
   // Pas de jeu
   if (!game) {
     return (
-      <div className="multiplayer-game mp-loading">
-        <div>
+      <div className="game-board setup">
+        <div className="setup-container">
+          <div className="logo">
+            <span className="logo-icon">❌</span>
+            <h1>Erreur</h1>
+          </div>
           <p>Impossible de charger la partie</p>
-          <button className="mp-action-btn" onClick={onBackToMenu}>Retour au menu</button>
+          <button className="start-btn" onClick={onBackToMenu}>
+            <span>Retour au menu</span>
+          </button>
         </div>
       </div>
     )
@@ -194,202 +243,255 @@ function MultiplayerGame({ onBackToMenu }) {
 
   // Modal de confirmation de sortie
   const ConfirmExitModal = () => showConfirmExit && (
-    <div className="mp-overlay mp-confirm-exit">
-      <div className="mp-modal">
+    <div className="confirm-exit-overlay" onClick={() => setShowConfirmExit(false)}>
+      <div className="confirm-exit-modal" onClick={e => e.stopPropagation()}>
         <h3>Quitter la partie ?</h3>
         <p>Êtes-vous sûr de vouloir quitter ?</p>
-        <div className="mp-confirm-buttons">
+        <div className="confirm-buttons">
           <button onClick={() => setShowConfirmExit(false)}>Annuler</button>
-          <button className="danger" onClick={() => { setShowConfirmExit(false); onBackToMenu(); }}>Quitter</button>
+          <button className="danger" onClick={confirmExit}>Quitter</button>
         </div>
       </div>
     </div>
   )
 
-  // Phase de passage des cartes
-  if (game.phase === 'passing') {
-    const hasConfirmed = currentPlayer?.cardsToPass?.length === game.cardsToPass
-
-    return (
-      <div className="multiplayer-game mp-passing-phase">
-        <button className="exit-btn" onClick={() => setShowConfirmExit(true)}>✕</button>
-        <ConfirmExitModal />
-
-        <div className="mp-phase-header">
-          <h2>📤 Phase de passage</h2>
-          <p>Sélectionnez {game.cardsToPass} cartes à passer au joueur suivant</p>
-          <p className="mp-selection-count">{selectedCards.length} / {game.cardsToPass} sélectionnées</p>
-        </div>
-
-        {error && <div className="mp-error-message">{error}</div>}
-
-        <div className="mp-passing-hand">
-          {currentPlayer?.hand?.map(card => (
-            <div
-              key={card.id}
-              className={`card-wrapper ${selectedCards.includes(card.id) ? 'selected' : ''}`}
-              onClick={() => !hasConfirmed && handleSelectCardToPass(card.id)}
-            >
-              <Card card={card} />
-            </div>
-          ))}
-        </div>
-
-        {!hasConfirmed ? (
-          <button
-            className="mp-confirm-pass-btn"
-            onClick={handleConfirmPass}
-            disabled={selectedCards.length !== game.cardsToPass}
-          >
-            ✓ Confirmer le passage
-          </button>
-        ) : (
-          <div className="mp-waiting-message">
-            ⏳ En attente des autres joueurs...
-          </div>
-        )}
-
-        <div className="mp-players-status">
-          {game.players.map((p) => (
-            <div key={p.id} className={`mp-player-status ${p.cardsToPass?.length === game.cardsToPass ? 'ready' : ''}`}>
-              <span>{p.name}</span>
-              <span>{p.cardsToPass?.length === game.cardsToPass ? '✓' : '...'}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   // Phase de lancer de dé
   if (game.phase === 'rolling_die') {
     return (
-      <div className="multiplayer-game mp-rolling-phase">
-        <button className="exit-btn" onClick={() => setShowConfirmExit(true)}>✕</button>
+      <div className="game-board die-phase">
         <ConfirmExitModal />
-
-        <div className="mp-phase-header">
-          <h2>🎲 Lancez le dé</h2>
-          <p>Cliquez sur le dé pour déterminer la couleur Papayoo</p>
+        <div className="die-container">
+          <h2>Lancer le dé Papayoo</h2>
+          <p className="die-instruction">Cliquez sur le dé pour déterminer la couleur Papayoo</p>
+          <Die onRoll={handleRollDie} result={null} />
         </div>
-
-        <Die onRoll={handleRollDie} result={null} />
       </div>
     )
   }
 
-  // Phase de jeu
-  const suitInfo = game.papayooSuit ? SUIT_DISPLAY[game.papayooSuit] : null
+  // Fin de manche
+  if (game.phase === 'round_end') {
+    return (
+      <div className="game-board round-end">
+        <ConfirmExitModal />
+        <div className="end-container">
+          <h2>🏁 Fin de la manche {game.roundNumber}</h2>
+          <ScoreBoard
+            players={game.players}
+            papayooSuit={game.papayooSuit}
+            roundNumber={game.roundNumber}
+          />
+          <button className="continue-btn" onClick={handleNewRound}>
+            <span>Manche suivante</span>
+            <span className="btn-icon">→</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
 
+  // Fin de partie
+  if (game.phase === 'game_end') {
+    const winner = [...game.players].sort((a, b) => a.score - b.score)[0]
+    return (
+      <div className="game-board game-end">
+        <ConfirmExitModal />
+        <div className="end-container">
+          <div className="winner-announcement">
+            <span className="trophy">🏆</span>
+            <h2>Partie terminée!</h2>
+            <p className="winner-name">{winner.name} gagne!</p>
+            <p className="winner-score">{winner.score} points</p>
+          </div>
+          <ScoreBoard
+            players={game.players}
+            papayooSuit={game.papayooSuit}
+            roundNumber={game.roundNumber}
+          />
+          <button className="restart-btn" onClick={onBackToMenu}>
+            <span>Retour au menu</span>
+            <span className="btn-icon">↺</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Transformer currentTrick pour le format attendu par TrickArea
+  const formattedTrick = game.currentTrick?.map(play => ({
+    playerId: game.players.findIndex(p => p.id === play.playerId),
+    card: play.card
+  })) || []
+
+  const papayooInfo = game.papayooSuit ? SUIT_DISPLAY[game.papayooSuit] : null
+  const roundDisplay = game.maxRounds === 'infinite'
+    ? `Manche ${game.roundNumber}`
+    : `Manche ${game.roundNumber}/${game.maxRounds}`
+
+  const cardsToPass = getCardsToPassCount(game.playerCount)
+
+  // Phase de passage ou phase de jeu principale
   return (
-    <div className="multiplayer-game">
-      <button className="exit-btn" onClick={() => setShowConfirmExit(true)}>✕</button>
+    <div className="game-board playing">
       <ConfirmExitModal />
 
       {/* Header */}
-      <div className="mp-game-header">
-        <div className="mp-round-info">Manche {game.roundNumber}</div>
-        {suitInfo && (
-          <div className="mp-papayoo-info" style={{ color: suitInfo.color }}>
-            🎯 Papayoo: {suitInfo.symbol} {suitInfo.name}
-          </div>
-        )}
-        {game.leadSuit && (
-          <div className="mp-lead-suit-info" style={{ color: SUIT_DISPLAY[game.leadSuit]?.color }}>
-            Couleur: {SUIT_DISPLAY[game.leadSuit]?.symbol} {SUIT_DISPLAY[game.leadSuit]?.name}
-          </div>
-        )}
-      </div>
-
-      {error && <div className="mp-error-message">{error}</div>}
-
-      {/* Message */}
-      <div className="mp-game-message">
-        {game.message}
-        {isMyTurn && game.phase === 'playing' && <span className="your-turn"> - C'est votre tour!</span>}
-      </div>
-
-      {/* Scores */}
-      <div className="mp-players-scores">
-        {game.players.map((p, idx) => (
-          <div key={p.id} className={`mp-player-score ${idx === game.currentPlayer ? 'current' : ''} ${p.id === playerId ? 'is-me' : ''}`}>
-            <span className="name">{p.name} {p.id === playerId && '(vous)'}</span>
-            <span className="score">{p.score} pts</span>
-            <span className="cards-count">{p.hand?.filter(c => !c.hidden)?.length || '?'} cartes</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Zone de jeu */}
-      <div className="mp-play-area">
-        <div className="mp-trick-area">
-          {game.currentTrick?.length === 0 && (
-            <div style={{ color: 'rgba(255,255,255,0.5)' }}>
-              {isMyTurn ? 'Jouez une carte pour commencer' : 'En attente...'}
+      <header className="game-header">
+        <div className="header-left">
+          <button className="back-btn" onClick={handleBackToMenuClick} title="Retour à l'accueil">
+            ←
+          </button>
+          <span className="round-badge">{roundDisplay}</span>
+        </div>
+        <div className="header-center">
+          {papayooInfo && (
+            <div className="papayoo-badge" style={{ '--suit-color': papayooInfo.color }}>
+              <span className="papayoo-label">Papayoo</span>
+              <span className="papayoo-suit">{papayooInfo.symbol} 7 = 40pts</span>
             </div>
           )}
-          {game.currentTrick?.map((play, idx) => {
-            const player = game.players.find(p => p.id === play.playerId)
-            return (
-              <div key={idx} className="mp-played-card">
-                <span className="mp-player-label">{player?.name}</span>
-                <Card card={play.card} />
-              </div>
-            )
-          })}
         </div>
+        <div className="header-right">
+          {error && <span className="game-message" style={{ color: '#ff6b6b' }}>{error}</span>}
+          {!error && game.message && <span className="game-message">{game.message}</span>}
+        </div>
+      </header>
 
-        {game.phase === 'trick_end' && (
-          <button className="mp-collect-btn" onClick={handleCollectTrick}>
-            Continuer →
-          </button>
-        )}
+      {/* Zone de jeu principale */}
+      <div className="game-content">
+        {/* Panneau gauche - Scores */}
+        <aside className="side-panel left">
+          <ScoreBoard
+            players={game.players}
+            papayooSuit={game.papayooSuit}
+            roundNumber={game.roundNumber}
+          />
+        </aside>
+
+        {/* Zone centrale */}
+        <main className="main-area">
+          {/* Autres joueurs */}
+          <div className="opponents-area">
+            {game.players.filter(p => p.id !== playerId).map((player, idx) => {
+              const playerIdx = game.players.findIndex(p => p.id === player.id)
+              return (
+                <div
+                  key={player.id}
+                  className={`opponent-slot ${game.currentPlayer === playerIdx ? 'active' : ''}`}
+                >
+                  <div className="opponent-cards">
+                    {[...Array(Math.min(player.hand?.filter(c => !c.hidden)?.length || 0, 6))].map((_, i) => (
+                      <div key={i} className="mini-card" style={{ '--i': i }} />
+                    ))}
+                  </div>
+                  <div className="opponent-info">
+                    <span className="opponent-name">{player.name}</span>
+                    <span className="opponent-card-count">
+                      {player.hand?.filter(c => !c.hidden)?.length || '?'} cartes
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Plateau de jeu */}
+          {game.phase === 'playing' && (
+            <>
+              <TrickArea
+                currentTrick={formattedTrick}
+                playerCount={game.playerCount}
+                papayooSuit={game.papayooSuit}
+                leadSuit={game.leadSuit}
+                onCardDrop={handleCardDrop}
+                isPlayerTurn={isMyTurn && game.currentTrick.length < game.playerCount}
+              />
+              {game.phase === 'trick_end' || game.currentTrick?.length === game.playerCount ? (
+                <button className="continue-btn" onClick={handleCollectTrick} style={{ marginTop: '20px' }}>
+                  Continuer →
+                </button>
+              ) : null}
+            </>
+          )}
+
+          {/* Phase de passage */}
+          {game.phase === 'passing' && currentPlayerData && (
+            <div className="pass-area">
+              <div className="pass-card">
+                <h3>Passage des cartes</h3>
+                <p>Sélectionnez {cardsToPass} cartes à passer à votre voisin</p>
+                <div className="pass-progress">
+                  <div
+                    className="pass-progress-bar"
+                    style={{ '--progress': selectedCards.length / cardsToPass }}
+                  />
+                  <span>{selectedCards.length} / {cardsToPass}</span>
+                </div>
+
+                {/* Statut des autres joueurs */}
+                <div className="pass-status">
+                  {game.players.map(p => (
+                    <span key={p.id} className={`status-dot ${p.cardsToPass?.length === cardsToPass ? 'ready' : ''}`}>
+                      {p.name}: {p.cardsToPass?.length === cardsToPass ? '✓' : '...'}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  className="pass-btn"
+                  onClick={handleConfirmPass}
+                  disabled={selectedCards.length !== cardsToPass || currentPlayerData.cardsToPass?.length === cardsToPass}
+                >
+                  {currentPlayerData.cardsToPass?.length === cardsToPass
+                    ? 'En attente des autres...'
+                    : 'Confirmer le passage →'}
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* Panneau droit - Info du tour */}
+        <aside className="side-panel right">
+          {game.phase === 'playing' && (
+            <div className="turn-info">
+              <h4>Tour en cours</h4>
+              <div className={`current-player ${isMyTurn ? 'is-you' : ''}`}>
+                <span className="player-indicator" />
+                <span>{game.players[game.currentPlayer]?.name}</span>
+                {isMyTurn && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
+              </div>
+              {game.leadSuit && (
+                <div className="lead-suit-info">
+                  <span>Couleur demandée:</span>
+                  <span className="lead-suit" style={{ color: SUIT_DISPLAY[game.leadSuit]?.color }}>
+                    {SUIT_DISPLAY[game.leadSuit]?.symbol} {SUIT_DISPLAY[game.leadSuit]?.name}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
       </div>
 
       {/* Main du joueur */}
-      {game.phase === 'playing' && currentPlayer?.hand?.length > 0 && (
-        <div className="mp-player-hand">
-          {currentPlayer.hand.map(card => (
-            <div
-              key={card.id}
-              className={`card-wrapper ${canPlayCard(card) ? 'playable' : 'disabled'} ${isMyTurn ? 'my-turn' : ''}`}
-              onClick={() => canPlayCard(card) && handlePlayCard(card.id)}
-            >
-              <Card card={card} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Fin de manche */}
-      {game.phase === 'round_end' && (
-        <div className="mp-overlay">
-          <div className="mp-modal">
-            <h2>🏁 Manche {game.roundNumber} terminée!</h2>
-            <ScoreBoard players={game.players} papayooSuit={game.papayooSuit} roundNumber={game.roundNumber} />
-            <button onClick={handleNewRound}>Manche suivante →</button>
+      {currentPlayerData && (
+        <footer className="player-area">
+          <div className="player-info">
+            <span className="your-turn-indicator">
+              {isMyTurn && game.phase === 'playing' ? "C'est à vous!" : ''}
+            </span>
           </div>
-        </div>
-      )}
-
-      {/* Fin de partie */}
-      {game.phase === 'game_end' && (
-        <div className="mp-overlay">
-          <div className="mp-modal">
-            <h2>🏆 Partie terminée!</h2>
-            <div className="winner">
-              <span className="trophy">🥇</span>
-              <span>
-                {(() => {
-                  const winner = [...game.players].sort((a, b) => a.score - b.score)[0]
-                  return `${winner.name} gagne avec ${winner.score} points!`
-                })()}
-              </span>
-            </div>
-            <ScoreBoard players={game.players} papayooSuit={game.papayooSuit} roundNumber={game.roundNumber} />
-            <button onClick={onBackToMenu}>Retour au menu</button>
-          </div>
-        </div>
+          <Hand
+            cards={currentPlayerData.hand || []}
+            onCardClick={handleCardClick}
+            selectedCards={game.phase === 'passing' ? selectedCards : []}
+            leadSuit={game.phase === 'playing' ? game.leadSuit : null}
+            isActive={isMyTurn && game.phase === 'playing'}
+            showCards={true}
+            draggable={game.phase === 'playing'}
+          />
+        </footer>
       )}
     </div>
   )
