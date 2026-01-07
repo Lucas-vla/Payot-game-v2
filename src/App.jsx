@@ -20,18 +20,18 @@ const MODES = {
 function AppContent() {
   const [mode, setMode] = useState(MODES.MENU)
   const [soloGameKey, setSoloGameKey] = useState(0)
+  const [inviteCode, setInviteCode] = useState(null)  // Code d'invitation depuis l'URL
   const multiplayer = useMultiplayer()
 
   // Vérifier si on arrive avec un code d'invitation dans l'URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const joinCode = params.get('join')
-    if (joinCode) {
+    if (joinCode && joinCode.length === 6) {
+      // Sauvegarder le code pour le pré-remplir dans le formulaire
+      setInviteCode(joinCode.toUpperCase())
       // Nettoyer l'URL
       window.history.replaceState({}, '', window.location.pathname)
-      // Afficher le formulaire de rejoindre avec le code pré-rempli
-      setMode(MODES.MENU)
-      // On pourrait auto-remplir le code, mais pour l'instant on laisse l'utilisateur le faire
     }
   }, [])
 
@@ -109,6 +109,8 @@ function AppContent() {
           onJoinMultiplayer={handleJoinMultiplayer}
           apiError={multiplayer.error}
           isLoading={multiplayer.isLoading}
+          inviteCode={inviteCode}
+          onClearInviteCode={() => setInviteCode(null)}
         />
       )
 

@@ -1,13 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Rules from './Rules'
 import './MainMenu.css'
 
-function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiError, isLoading }) {
+function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiError, isLoading, inviteCode, onClearInviteCode }) {
   const [showJoinForm, setShowJoinForm] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [roomCode, setRoomCode] = useState('')
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('playerName') || '')
   const [error, setError] = useState('')
+
+  // Si on a un code d'invitation, afficher directement le formulaire avec le code pré-rempli
+  useEffect(() => {
+    if (inviteCode) {
+      setRoomCode(inviteCode)
+      setShowJoinForm(true)
+    }
+  }, [inviteCode])
 
   const handleJoinSubmit = async (e) => {
     e.preventDefault()
@@ -20,7 +28,14 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
       return
     }
     setError('')
+    // Sauvegarder le nom
+    localStorage.setItem('playerName', playerName.trim())
     await onJoinMultiplayer(roomCode.trim().toUpperCase(), playerName.trim())
+  }
+
+  const handleBackToMenu = () => {
+    setShowJoinForm(false)
+    if (onClearInviteCode) onClearInviteCode()
   }
 
   // Afficher l'erreur locale ou l'erreur de l'API
@@ -83,7 +98,7 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
         ) : (
           /* Formulaire pour rejoindre */
           <div className="join-form-container">
-            <button className="back-link" onClick={() => setShowJoinForm(false)}>
+            <button className="back-link" onClick={handleBackToMenu}>
               ← Retour au menu
             </button>
 
