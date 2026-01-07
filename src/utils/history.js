@@ -25,8 +25,31 @@ export function saveGameToHistory(gameData) {
   try {
     const history = getGameHistory()
 
+    // Vérifier si une partie très similaire existe déjà (éviter les doublons)
+    // Une partie est considérée comme doublon si elle a le même nombre de joueurs,
+    // les mêmes scores et a été enregistrée dans les 5 dernières secondes
+    const now = Date.now()
+    const recentDuplicate = history.find(game => {
+      const timeDiff = now - game.id
+      if (timeDiff > 5000) return false // Plus de 5 secondes de différence
+
+      if (game.playerCount !== gameData.playerCount) return false
+      if (game.rounds !== gameData.roundNumber) return false
+
+      // Vérifier si les scores sont identiques
+      const existingScores = game.players.map(p => p.score).sort((a, b) => a - b).join(',')
+      const newScores = gameData.players.map(p => p.score).sort((a, b) => a - b).join(',')
+
+      return existingScores === newScores
+    })
+
+    if (recentDuplicate) {
+      console.log('Partie doublon détectée, sauvegarde ignorée')
+      return recentDuplicate
+    }
+
     const gameEntry = {
-      id: Date.now(),
+      id: now,
       date: new Date().toISOString(),
       playerCount: gameData.playerCount,
       rounds: gameData.roundNumber,

@@ -156,7 +156,8 @@ function gameReducer(state, action) {
     }
 
     case ACTIONS.ROLL_DIE: {
-      const papayooSuit = rollPapayooDie()
+      // Utiliser la couleur passée par le dé, ou en générer une si non fournie
+      const papayooSuit = action.payload?.suit || rollPapayooDie()
       const suitInfo = SUIT_DISPLAY[papayooSuit]
       return {
         ...state,
@@ -337,7 +338,7 @@ export function GameProvider({ children }) {
     selectCardToPass: (playerId, cardId) =>
       dispatch({ type: ACTIONS.SELECT_CARD_TO_PASS, payload: { playerId, cardId } }),
     confirmPass: () => dispatch({ type: ACTIONS.CONFIRM_PASS }),
-    rollDie: () => dispatch({ type: ACTIONS.ROLL_DIE }),
+    rollDie: (suit) => dispatch({ type: ACTIONS.ROLL_DIE, payload: { suit } }),
     playCard: (playerId, cardId) =>
       dispatch({ type: ACTIONS.PLAY_CARD, payload: { playerId, cardId } }),
     collectTrick: () => dispatch({ type: ACTIONS.COLLECT_TRICK }),

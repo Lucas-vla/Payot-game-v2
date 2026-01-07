@@ -6,7 +6,6 @@ function Die({ onRoll, result }) {
   const [isRolling, setIsRolling] = useState(false)
   const [displaySuit, setDisplaySuit] = useState(null)
   const [showResult, setShowResult] = useState(false)
-  const [finalSuit, setFinalSuit] = useState(null)
 
   const handleClick = () => {
     if (isRolling || result || showResult) return
@@ -18,7 +17,6 @@ function Die({ onRoll, result }) {
     const resultSuit = PAPAYOO_ELIGIBLE_SUITS[
       Math.floor(Math.random() * PAPAYOO_ELIGIBLE_SUITS.length)
     ]
-    setFinalSuit(resultSuit)
 
     // Animation de roulement avec ralentissement progressif
     let rollCount = 0
@@ -52,9 +50,9 @@ function Die({ onRoll, result }) {
         // Petit délai avant de montrer le résultat complet
         setTimeout(() => {
           setShowResult(true)
-          // Appeler onRoll après l'animation
+          // Appeler onRoll avec la couleur générée après l'animation
           setTimeout(() => {
-            onRoll()
+            onRoll(resultSuit)
           }, 800)
         }, 500)
       } else {
