@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { GameProvider } from './context/GameContext'
 import { MultiplayerProvider, useMultiplayer } from './context/MultiplayerContext'
 import GameBoard from './components/GameBoard'
+import MultiplayerGame from './components/MultiplayerGame'
 import MainMenu from './components/MainMenu'
 import CreateRoom from './components/CreateRoom'
 import Lobby from './components/Lobby'
@@ -147,18 +148,10 @@ function AppContent() {
       )
 
     case MODES.MULTIPLAYER:
-      // Pour l'instant, on utilise le même GameBoard mais en mode multijoueur
-      // TODO: Implémenter la vraie logique multijoueur avec WebSocket
       return (
-        <GameProvider key={`multi-${multiplayer.currentRoom}`}>
-          <div className="app">
-            <GameBoard
-              onBackToMenu={handleBackToMenu}
-              isMultiplayer={true}
-              roomPlayers={multiplayer.roomPlayers}
-            />
-          </div>
-        </GameProvider>
+        <div className="app">
+          <MultiplayerGame onBackToMenu={handleBackToMenu} />
+        </div>
       )
 
     default:

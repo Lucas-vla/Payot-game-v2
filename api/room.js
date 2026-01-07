@@ -127,7 +127,7 @@ export default async function handler(req, res) {
           return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { hostName, playerCount, hostId } = req.body
+        const { hostName, playerCount, hostId, maxRounds } = req.body
 
         if (!hostName || !playerCount || !hostId) {
           return res.status(400).json({ error: 'Missing required fields' })
@@ -145,6 +145,7 @@ export default async function handler(req, res) {
           code: roomCode,
           hostId,
           playerCount: parseInt(playerCount),
+          maxRounds: maxRounds || 1,
           players: [{
             id: hostId,
             name: hostName,
