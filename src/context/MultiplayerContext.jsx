@@ -16,8 +16,14 @@ export function MultiplayerProvider({ children }) {
   const [isHost, setIsHost] = useState(false)
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [gameStarted, setGameStarted] = useState(false)  // Nouvel état pour détecter le démarrage
+  const [gameStarted, setGameStarted] = useState(false)
   const pollingRef = useRef(null)
+  const gameStartedRef = useRef(false)  // Ref pour éviter les closures stale
+
+  // Synchroniser la ref avec l'état
+  useEffect(() => {
+    gameStartedRef.current = gameStarted
+  }, [gameStarted])
 
   // Sauvegarder l'ID du joueur
   useEffect(() => {
@@ -46,8 +52,10 @@ export function MultiplayerProvider({ children }) {
           setRoomPlayers(data.room.players)
           setIsHost(data.room.hostId === playerId)
 
-          // Détecter si la partie a démarré
-          if (data.room.status === 'playing' && !gameStarted) {
+          // Détecter si la partie a démarré (utiliser la ref pour éviter closure stale)
+          if (data.room.status === 'playing' && !gameStartedRef.current) {
+            console.log('Game started detected!')
+            gameStartedRef.current = true
             setGameStarted(true)
           }
         }
@@ -59,7 +67,7 @@ export function MultiplayerProvider({ children }) {
     // Poll immédiatement puis toutes les 2 secondes
     poll()
     pollingRef.current = setInterval(poll, 2000)
-  }, [playerId, gameStarted])
+  }, [playerId])
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -174,7 +182,8 @@ export function MultiplayerProvider({ children }) {
     setRoomPlayers([])
     setIsHost(false)
     setError(null)
-    setGameStarted(false)  // Réinitialiser l'état du jeu
+    gameStartedRef.current = false
+    setGameStarted(false)
   }, [currentRoom, playerId, stopPolling])
 
   // Marquer le joueur comme prêt
@@ -291,6 +300,7 @@ export function MultiplayerProvider({ children }) {
 
   // Réinitialiser l'état gameStarted (appelé après avoir traité le démarrage)
   const resetGameStarted = useCallback(() => {
+    gameStartedRef.current = false
     setGameStarted(false)
   }, [])
 

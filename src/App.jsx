@@ -38,12 +38,13 @@ function AppContent() {
   // Détecter quand la partie démarre (pour les joueurs non-hôtes)
   useEffect(() => {
     if (multiplayer.gameStarted && mode === MODES.LOBBY) {
+      console.log('Switching to multiplayer mode!')
       // La partie a démarré, basculer vers le mode multijoueur
       multiplayer.stopPolling()
       multiplayer.resetGameStarted()
       setMode(MODES.MULTIPLAYER)
     }
-  }, [multiplayer.gameStarted, mode, multiplayer])
+  }, [multiplayer.gameStarted, mode])
 
   // Gérer le retour au menu
   const handleBackToMenu = () => {
