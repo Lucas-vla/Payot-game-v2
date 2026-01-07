@@ -323,12 +323,26 @@ export function selectCardToPlay(hand, currentTrick, leadSuit, papayooSuit, play
  */
 function selectCardAsFirstPlayer(analysis, hand, papayooSuit, isEarlyGame, isLateGame, voidSuits, playerId, playerCount) {
 
-  // === PROTECTION ABSOLUE DU PAPAYOO ===
-  // Ne JAMAIS ouvrir avec le 7 de la couleur Papayoo (40 points!)
-  // Filtrer le Papayoo des cartes possibles
-  let workingAnalysis = analysis.filter(a => !a.isPapayoo)
+  // === PROTECTION ABSOLUE : NE JAMAIS OUVRIR AVEC DES CARTES À GROS POINTS ===
+  // Filtrer d'abord les cartes très dangereuses (Papayoo 40pts et gros Payoo 10+)
+  const highValuePayoo = analysis.filter(a => a.card.suit === SUITS.PAYOO && a.card.value >= 10)
+  const papayooCard = analysis.filter(a => a.isPapayoo)
 
-  // Si on n'a que le Papayoo, on est obligé de le jouer (ne devrait pas arriver)
+  // Créer une liste de travail en excluant les cartes très dangereuses
+  let workingAnalysis = analysis.filter(a => {
+    // Ne jamais ouvrir avec le Papayoo (40 points!)
+    if (a.isPapayoo) return false
+    // Ne jamais ouvrir avec des gros Payoo (10+ points) si on a d'autres options
+    if (a.card.suit === SUITS.PAYOO && a.card.value >= 10) return false
+    return true
+  })
+
+  // Si on n'a que des cartes dangereuses, essayer d'éviter au moins le Papayoo
+  if (workingAnalysis.length === 0) {
+    workingAnalysis = analysis.filter(a => !a.isPapayoo)
+  }
+
+  // Si vraiment on n'a que le Papayoo, on est obligé de le jouer
   if (workingAnalysis.length === 0) {
     workingAnalysis = analysis
   }
@@ -376,8 +390,8 @@ function selectCardAsFirstPlayer(analysis, hand, papayooSuit, isEarlyGame, isLat
 
   if (payooCards.length > 0 && playersVoidInPayoo < playerCount - 2) {
     // Calculer si c'est avantageux de jouer Payoo
+    // Seulement les petits Payoo (1-5) sont intéressants pour ouvrir
     const smallPayoo = payooCards.filter(a => a.card.value <= 5)
-    const mediumPayoo = payooCards.filter(a => a.card.value >= 6 && a.card.value <= 10)
 
     // Si on a des petits Payoo (1-5), c'est très avantageux de les jouer!
     // On force les autres à jouer leurs gros Payoo
@@ -388,18 +402,12 @@ function selectCardAsFirstPlayer(analysis, hand, papayooSuit, isEarlyGame, isLat
       ).card
     }
 
-    // Si on a beaucoup de Payoo moyens et peu d'autres cartes,
-    // on peut jouer un Payoo moyen pour se débarrasser de la couleur
-    if (mediumPayoo.length >= 2 && nonPayooCards.length <= 3) {
-      // Jouer le plus petit des moyens
-      return mediumPayoo.reduce((lowest, a) =>
-        a.card.value < lowest.card.value ? a : lowest
-      ).card
-    }
+    // NE PAS ouvrir avec des Payoo moyens (6-9) sauf si on n'a vraiment pas le choix
+    // Ces cartes sont risquées car on peut facilement les récupérer
   }
 
   // === STRATÉGIE STANDARD ===
-  // Éviter de jouer des cartes à points (gros Payoo, 7 du Papayoo)
+  // Éviter de jouer des cartes à points (Payoo, 7 du Papayoo)
   const safeCards = workingAnalysis.filter(a => a.points === 0)
 
   if (safeCards.length > 0) {
@@ -434,18 +442,22 @@ function selectCardAsFirstPlayer(analysis, hand, papayooSuit, isEarlyGame, isLat
   }
 
   // Si toutes les cartes ont des points, jouer la moins dangereuse
-  // MAIS JAMAIS LE PAPAYOO si on peut l'éviter
-  const nonPapayooAnalysis = workingAnalysis.filter(a => !a.isPapayoo)
-  const finalAnalysis = nonPapayooAnalysis.length > 0 ? nonPapayooAnalysis : workingAnalysis
+  // Priorité: petits Payoo < moyens Payoo < gros Payoo < Papayoo (40pts)
+  workingAnalysis.sort((a, b) => {
+    // Le Papayoo (40 pts) est toujours en dernier
+    if (a.isPapayoo && !b.isPapayoo) return 1
+    if (!a.isPapayoo && b.isPapayoo) return -1
 
-  finalAnalysis.sort((a, b) => {
-    // Priorité aux petits Payoo (on peut gagner avec peu de points)
+    // Entre Payoo, trier par valeur (les petits d'abord)
     if (a.card.suit === SUITS.PAYOO && b.card.suit === SUITS.PAYOO) {
       return a.card.value - b.card.value
     }
+
+    // Sinon, trier par points
     return a.points - b.points
   })
-  return finalAnalysis[0].card
+
+  return workingAnalysis[0].card
 }
 
 /**
