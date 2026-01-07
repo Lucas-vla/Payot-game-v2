@@ -241,10 +241,15 @@ function gameReducer(state, action) {
 
       if (allHandsEmpty) {
         // Calculer les scores de la manche
-        const finalPlayers = newPlayers.map(p => ({
-          ...p,
-          score: p.score + calculateTrickPoints(p.collectedCards, state.papayooSuit)
-        }))
+        const finalPlayers = newPlayers.map(p => {
+          const roundPoints = calculateTrickPoints(p.collectedCards, state.papayooSuit)
+          return {
+            ...p,
+            score: p.score + roundPoints,
+            lastRoundPoints: roundPoints,  // Stocker les points de cette manche
+            collectedCards: []  // Vider les cartes collectées après calcul
+          }
+        })
 
         // Déterminer si la partie est terminée
         let gameOver = false

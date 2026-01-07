@@ -1,16 +1,28 @@
 import React from 'react'
-import { SUIT_DISPLAY } from '../utils/deck'
 import { calculateTrickPoints } from '../utils/scoring'
 import './ScoreBoard.css'
 
-function ScoreBoard({ players, papayooSuit, roundNumber }) {
-  const playersWithRoundPoints = players.map(player => ({
-    ...player,
-    roundPoints: calculateTrickPoints(player.collectedCards || [], papayooSuit)
-  }))
+function ScoreBoard({ players, papayooSuit, roundNumber, showRoundBreakdown = true }) {
+  // Utiliser lastRoundPoints si disponible, sinon calculer (pour compatibilité)
+  const playersWithRoundPoints = players.map(player => {
+    // Si lastRoundPoints existe, l'utiliser (les points sont déjà dans le score)
+    // Sinon, calculer à partir des collectedCards (pendant la manche en cours)
+    const hasLastRoundPoints = player.lastRoundPoints !== undefined
+    const roundPoints = hasLastRoundPoints
+      ? player.lastRoundPoints
+      : calculateTrickPoints(player.collectedCards || [], papayooSuit)
+
+    return {
+      ...player,
+      roundPoints,
+      // Le score total est déjà correct si lastRoundPoints existe
+      displayScore: hasLastRoundPoints ? player.score : player.score + roundPoints,
+      previousScore: hasLastRoundPoints ? player.score - player.lastRoundPoints : player.score
+    }
+  })
 
   const sortedPlayers = [...playersWithRoundPoints].sort((a, b) =>
-    (a.score + a.roundPoints) - (b.score + b.roundPoints)
+    a.displayScore - b.displayScore
   )
 
   return (
@@ -22,7 +34,6 @@ function ScoreBoard({ players, papayooSuit, roundNumber }) {
 
       <div className="score-list">
         {sortedPlayers.map((player, index) => {
-          const totalWithRound = player.score + player.roundPoints
           const isLeader = index === 0
 
           return (
@@ -35,14 +46,14 @@ function ScoreBoard({ players, papayooSuit, roundNumber }) {
               </div>
               <div className="score-details">
                 <span className="score-name">{player.name}</span>
-                {player.roundPoints > 0 && (
+                {showRoundBreakdown && player.roundPoints > 0 && (
                   <span className="score-breakdown">
-                    {player.score} + {player.roundPoints}
+                    {player.previousScore} + {player.roundPoints}
                   </span>
                 )}
               </div>
               <div className="score-value">
-                {totalWithRound}
+                {player.displayScore}
               </div>
             </div>
           )
