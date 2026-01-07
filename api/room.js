@@ -1,16 +1,54 @@
-import { Redis } from '@upstash/redis'
+import { createClient } from 'redis'
 
-// Initialiser Redis (utilise les variables d'environnement UPSTASH_REDIS_REST_URL et UPSTASH_REDIS_REST_TOKEN)
+// Initialiser Redis
+// Supporte Vercel Redis (REDIS_URL) et Upstash (UPSTASH_REDIS_REST_URL)
 let redis = null
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    })
+let redisType = null // 'vercel' ou 'upstash'
+
+async function getRedisClient() {
+  if (redis && redisType === 'vercel') {
+    // Vérifier si la connexion est toujours active
+    try {
+      await redis.ping()
+      return redis
+    } catch (e) {
+      redis = null
+    }
   }
-} catch (e) {
-  console.log('Redis not configured, using in-memory fallback')
+
+  // Option 1: Vercel Redis (Redis Labs) - utilise REDIS_URL
+  if (process.env.REDIS_URL) {
+    try {
+      redis = createClient({ url: process.env.REDIS_URL })
+      redis.on('error', (err) => console.log('Redis Client Error', err))
+      await redis.connect()
+      redisType = 'vercel'
+      console.log('Connected to Vercel Redis')
+      return redis
+    } catch (e) {
+      console.log('Failed to connect to Vercel Redis:', e.message)
+      redis = null
+    }
+  }
+
+  // Option 2: Upstash Redis (REST API) - import dynamique
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    try {
+      const { Redis } = await import('@upstash/redis')
+      redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+      redisType = 'upstash'
+      console.log('Connected to Upstash Redis')
+      return redis
+    } catch (e) {
+      console.log('Failed to connect to Upstash Redis:', e.message)
+      redis = null
+    }
+  }
+
+  return null
 }
 
 // Fallback en mémoire si Redis n'est pas configuré
@@ -18,28 +56,46 @@ const memoryRooms = new Map()
 
 // Fonctions d'accès aux données (avec fallback mémoire)
 async function getRoom(code) {
-  if (redis) {
-    const room = await redis.get(`room:${code}`)
-    return room
+  const client = await getRedisClient()
+
+  if (client && redisType === 'vercel') {
+    const data = await client.get(`room:${code}`)
+    return data ? JSON.parse(data) : null
   }
+
+  if (client && redisType === 'upstash') {
+    return await client.get(`room:${code}`)
+  }
+
   return memoryRooms.get(code)
 }
 
 async function setRoom(code, room) {
-  if (redis) {
-    // Expire après 24 heures
-    await redis.set(`room:${code}`, room, { ex: 86400 })
-  } else {
-    memoryRooms.set(code, room)
+  const client = await getRedisClient()
+
+  if (client && redisType === 'vercel') {
+    // Expire après 24 heures (86400 secondes)
+    await client.setEx(`room:${code}`, 86400, JSON.stringify(room))
+    return
   }
+
+  if (client && redisType === 'upstash') {
+    await client.set(`room:${code}`, room, { ex: 86400 })
+    return
+  }
+
+  memoryRooms.set(code, room)
 }
 
 async function deleteRoom(code) {
-  if (redis) {
-    await redis.del(`room:${code}`)
-  } else {
-    memoryRooms.delete(code)
+  const client = await getRedisClient()
+
+  if (client) {
+    await client.del(`room:${code}`)
+    return
   }
+
+  memoryRooms.delete(code)
 }
 
 // Générer un code de room unique
