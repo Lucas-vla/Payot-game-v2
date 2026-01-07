@@ -16,6 +16,7 @@ export function MultiplayerProvider({ children }) {
   const [isHost, setIsHost] = useState(false)
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)  // Nouvel état pour détecter le démarrage
   const pollingRef = useRef(null)
 
   // Sauvegarder l'ID du joueur
@@ -44,6 +45,11 @@ export function MultiplayerProvider({ children }) {
           setRoomData(data.room)
           setRoomPlayers(data.room.players)
           setIsHost(data.room.hostId === playerId)
+
+          // Détecter si la partie a démarré
+          if (data.room.status === 'playing' && !gameStarted) {
+            setGameStarted(true)
+          }
         }
       } catch (err) {
         console.error('Polling error:', err)
@@ -53,7 +59,7 @@ export function MultiplayerProvider({ children }) {
     // Poll immédiatement puis toutes les 2 secondes
     poll()
     pollingRef.current = setInterval(poll, 2000)
-  }, [playerId])
+  }, [playerId, gameStarted])
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -168,6 +174,7 @@ export function MultiplayerProvider({ children }) {
     setRoomPlayers([])
     setIsHost(false)
     setError(null)
+    setGameStarted(false)  // Réinitialiser l'état du jeu
   }, [currentRoom, playerId, stopPolling])
 
   // Marquer le joueur comme prêt
@@ -282,6 +289,11 @@ export function MultiplayerProvider({ children }) {
     }
   }, [currentRoom])
 
+  // Réinitialiser l'état gameStarted (appelé après avoir traité le démarrage)
+  const resetGameStarted = useCallback(() => {
+    setGameStarted(false)
+  }, [])
+
   const value = {
     playerId,
     playerName,
@@ -292,6 +304,7 @@ export function MultiplayerProvider({ children }) {
     isHost,
     error,
     isLoading,
+    gameStarted,  // Nouvel état
     setError,
     createRoom,
     joinRoom,
@@ -301,7 +314,9 @@ export function MultiplayerProvider({ children }) {
     allPlayersReady,
     startGame,
     getRoomInfo,
-    refreshPlayers
+    refreshPlayers,
+    resetGameStarted,  // Nouvelle fonction
+    stopPolling  // Exposer pour arrêter le polling après démarrage
   }
 
   return (

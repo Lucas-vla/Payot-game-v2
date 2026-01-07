@@ -34,6 +34,16 @@ function AppContent() {
     }
   }, [])
 
+  // Détecter quand la partie démarre (pour les joueurs non-hôtes)
+  useEffect(() => {
+    if (multiplayer.gameStarted && mode === MODES.LOBBY) {
+      // La partie a démarré, basculer vers le mode multijoueur
+      multiplayer.stopPolling()
+      multiplayer.resetGameStarted()
+      setMode(MODES.MULTIPLAYER)
+    }
+  }, [multiplayer.gameStarted, mode, multiplayer])
+
   // Gérer le retour au menu
   const handleBackToMenu = () => {
     if (multiplayer.currentRoom) {
@@ -75,8 +85,10 @@ function AppContent() {
   }
 
   // Lancer la partie multijoueur
-  const handleStartMultiplayerGame = () => {
-    if (multiplayer.startGame()) {
+  const handleStartMultiplayerGame = async () => {
+    const success = await multiplayer.startGame()
+    if (success) {
+      multiplayer.stopPolling()
       setMode(MODES.MULTIPLAYER)
     }
   }
