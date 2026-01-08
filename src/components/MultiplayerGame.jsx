@@ -395,8 +395,8 @@ function MultiplayerGame({ onBackToMenu }) {
             })}
           </div>
 
-          {/* Plateau de jeu */}
-          {game.phase === 'playing' && (
+          {/* Plateau de jeu - affiché pendant playing ET trick_end */}
+          {(game.phase === 'playing' || game.phase === 'trick_end') && (
             <>
               <TrickArea
                 currentTrick={formattedTrick}
@@ -404,13 +404,14 @@ function MultiplayerGame({ onBackToMenu }) {
                 papayooSuit={game.papayooSuit}
                 leadSuit={game.leadSuit}
                 onCardDrop={handleCardDrop}
-                isPlayerTurn={isMyTurn && game.currentTrick.length < game.playerCount}
+                isPlayerTurn={isMyTurn && game.phase === 'playing' && game.currentTrick.length < game.playerCount}
               />
-              {game.phase === 'trick_end' || game.currentTrick?.length === game.playerCount ? (
+              {/* Bouton continuer après un pli */}
+              {game.phase === 'trick_end' && (
                 <button className="continue-btn" onClick={handleCollectTrick} style={{ marginTop: '20px' }}>
                   Continuer →
                 </button>
-              ) : null}
+              )}
             </>
           )}
 
@@ -453,13 +454,13 @@ function MultiplayerGame({ onBackToMenu }) {
 
         {/* Panneau droit - Info du tour */}
         <aside className="side-panel right">
-          {game.phase === 'playing' && (
+          {(game.phase === 'playing' || game.phase === 'trick_end') && (
             <div className="turn-info">
-              <h4>Tour en cours</h4>
+              <h4>{game.phase === 'trick_end' ? 'Pli terminé' : 'Tour en cours'}</h4>
               <div className={`current-player ${isMyTurn ? 'is-you' : ''}`}>
                 <span className="player-indicator" />
                 <span>{game.players[game.currentPlayer]?.name}</span>
-                {isMyTurn && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
+                {isMyTurn && game.phase === 'playing' && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
               </div>
               {game.leadSuit && (
                 <div className="lead-suit-info">

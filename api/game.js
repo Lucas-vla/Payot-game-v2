@@ -589,6 +589,11 @@ export default async function handler(req, res) {
           return res.status(404).json({ error: 'Game not found' })
         }
 
+        // Vérifier qu'on est bien dans la phase trick_end
+        if (game.phase !== 'trick_end') {
+          return res.status(400).json({ error: 'Not in trick_end phase' })
+        }
+
         game.currentTrick = []
         game.leadSuit = null
         game.phase = 'playing'
