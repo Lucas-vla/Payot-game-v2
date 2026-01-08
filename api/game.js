@@ -516,9 +516,12 @@ export default async function handler(req, res) {
             game.currentTrick = []
             game.leadSuit = null
           } else {
-            game.phase = 'trick_end'
-            game.message = `${game.players[winnerIndex].name} remporte le pli`
+            // Passer directement au pli suivant (pas de phase trick_end)
+            game.currentTrick = []
+            game.leadSuit = null
             game.currentPlayer = winnerIndex
+            game.message = `${game.players[winnerIndex].name} remporte le pli et rejoue`
+            // La phase reste 'playing'
           }
         } else {
           // Joueur suivant
@@ -560,14 +563,35 @@ export default async function handler(req, res) {
                 const over = game.roundNumber >= game.maxRounds
                 game.phase = over ? 'game_end' : 'round_end'
                 game.message = over ? 'Partie terminée!' : 'Manche terminée!'
-                // Vider le pli seulement pour round_end et game_end
                 game.currentTrick = []
                 game.leadSuit = null
               } else {
-                game.phase = 'trick_end'
-                game.message = `${game.players[winnerIndex].name} remporte le pli`
+                // Passer directement au pli suivant (pas de phase trick_end)
+                game.currentTrick = []
+                game.leadSuit = null
                 game.currentPlayer = winnerIndex
-                // NE PAS vider currentTrick ici - on veut l'afficher
+                game.message = `${game.players[winnerIndex].name} remporte le pli et rejoue`
+                // La phase reste 'playing'
+
+                // Si le gagnant est un bot, le faire jouer immédiatement
+                const winner = game.players[winnerIndex]
+                if (winner.isBot && winner.hand.length > 0) {
+                  const botCard = selectBotCard(winner.hand, null, game.papayooSuit, [])
+                  winner.hand = winner.hand.filter(c => c.id !== botCard.id)
+                  game.currentTrick.push({ playerId: winner.id, card: botCard })
+                  game.leadSuit = botCard.suit
+                  game.currentPlayer = (winnerIndex + 1) % game.playerCount
+
+                  // Faire jouer les bots suivants
+                  while (game.players[game.currentPlayer].isBot && game.currentTrick.length < game.playerCount) {
+                    const bp = game.players[game.currentPlayer]
+                    if (bp.hand.length === 0) break
+                    const bc = selectBotCard(bp.hand, game.leadSuit, game.papayooSuit, game.currentTrick)
+                    bp.hand = bp.hand.filter(c => c.id !== bc.id)
+                    game.currentTrick.push({ playerId: bp.id, card: bc })
+                    game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
+                  }
+                }
               }
             }
           }
