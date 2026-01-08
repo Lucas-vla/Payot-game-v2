@@ -58,6 +58,35 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }, [fetchGameState])
 
+  // Collecter le pli automatiquement après un délai
+  const collectTrick = useCallback(async () => {
+    if (game?.phase !== 'trick_end') return
+
+    try {
+      const response = await fetch(`${API_BASE}?action=collectTrick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomCode: currentRoom })
+      })
+      const data = await response.json()
+      if (data.success) {
+        setGame(data.game)
+      }
+    } catch (err) {
+      console.error('CollectTrick error:', err)
+    }
+  }, [game?.phase, currentRoom])
+
+  // Auto-collecter le pli après 2 secondes quand on est en trick_end
+  useEffect(() => {
+    if (game?.phase === 'trick_end') {
+      const timer = setTimeout(() => {
+        collectTrick()
+      }, 2000) // 2 secondes pour voir qui a gagné
+      return () => clearTimeout(timer)
+    }
+  }, [game?.phase, collectTrick])
+
   // Trouver le joueur actuel
   const currentPlayerData = game?.players?.find(p => p.id === playerId)
   const currentPlayerIndex = game?.players?.findIndex(p => p.id === playerId) ?? -1
@@ -380,16 +409,33 @@ function MultiplayerGame({ onBackToMenu }) {
             })}
           </div>
 
-          {/* Plateau de jeu */}
-          {game.phase === 'playing' && (
-            <TrickArea
-              currentTrick={formattedTrick}
-              playerCount={game.playerCount}
-              papayooSuit={game.papayooSuit}
-              leadSuit={game.leadSuit}
-              onCardDrop={handleCardDrop}
-              isPlayerTurn={isMyTurn && game.currentTrick.length < game.playerCount}
-            />
+          {/* Plateau de jeu - affiché pendant playing ET trick_end */}
+          {(game.phase === 'playing' || game.phase === 'trick_end') && (
+            <>
+              <TrickArea
+                currentTrick={formattedTrick}
+                playerCount={game.playerCount}
+                papayooSuit={game.papayooSuit}
+                leadSuit={game.leadSuit}
+                onCardDrop={handleCardDrop}
+                isPlayerTurn={isMyTurn && game.phase === 'playing' && game.currentTrick.length < game.playerCount}
+              />
+              {/* Message du gagnant du pli */}
+              {game.phase === 'trick_end' && (
+                <div className="trick-winner-message" style={{
+                  textAlign: 'center',
+                  marginTop: '15px',
+                  padding: '10px 20px',
+                  backgroundColor: 'rgba(76, 175, 80, 0.3)',
+                  borderRadius: '10px',
+                  color: '#4caf50',
+                  fontWeight: 'bold',
+                  fontSize: '16px'
+                }}>
+                  🏆 {game.message}
+                </div>
+              )}
+            </>
           )}
 
           {/* Phase de passage */}
@@ -431,13 +477,13 @@ function MultiplayerGame({ onBackToMenu }) {
 
         {/* Panneau droit - Info du tour */}
         <aside className="side-panel right">
-          {game.phase === 'playing' && (
+          {(game.phase === 'playing' || game.phase === 'trick_end') && (
             <div className="turn-info">
-              <h4>Tour en cours</h4>
+              <h4>{game.phase === 'trick_end' ? 'Pli terminé' : 'Tour en cours'}</h4>
               <div className={`current-player ${isMyTurn ? 'is-you' : ''}`}>
                 <span className="player-indicator" />
                 <span>{game.players[game.currentPlayer]?.name}</span>
-                {isMyTurn && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
+                {isMyTurn && game.phase === 'playing' && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
               </div>
               {game.leadSuit && (
                 <div className="lead-suit-info">

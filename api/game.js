@@ -516,12 +516,12 @@ export default async function handler(req, res) {
             game.currentTrick = []
             game.leadSuit = null
           } else {
-            // Passer directement au pli suivant (pas de phase trick_end)
-            game.currentTrick = []
-            game.leadSuit = null
+            // Phase trick_end pour montrer qui a gagné (sera auto-collecté par le frontend)
+            game.phase = 'trick_end'
+            game.trickWinner = winnerIndex
             game.currentPlayer = winnerIndex
-            game.message = `${game.players[winnerIndex].name} remporte le pli et rejoue`
-            // La phase reste 'playing'
+            game.message = `${game.players[winnerIndex].name} remporte le pli!`
+            // On garde currentTrick pour l'affichage
           }
         } else {
           // Joueur suivant
@@ -566,32 +566,12 @@ export default async function handler(req, res) {
                 game.currentTrick = []
                 game.leadSuit = null
               } else {
-                // Passer directement au pli suivant (pas de phase trick_end)
-                game.currentTrick = []
-                game.leadSuit = null
+                // Phase trick_end pour montrer qui a gagné
+                game.phase = 'trick_end'
+                game.trickWinner = winnerIndex
                 game.currentPlayer = winnerIndex
-                game.message = `${game.players[winnerIndex].name} remporte le pli et rejoue`
-                // La phase reste 'playing'
-
-                // Si le gagnant est un bot, le faire jouer immédiatement
-                const winner = game.players[winnerIndex]
-                if (winner.isBot && winner.hand.length > 0) {
-                  const botCard = selectBotCard(winner.hand, null, game.papayooSuit, [])
-                  winner.hand = winner.hand.filter(c => c.id !== botCard.id)
-                  game.currentTrick.push({ playerId: winner.id, card: botCard })
-                  game.leadSuit = botCard.suit
-                  game.currentPlayer = (winnerIndex + 1) % game.playerCount
-
-                  // Faire jouer les bots suivants
-                  while (game.players[game.currentPlayer].isBot && game.currentTrick.length < game.playerCount) {
-                    const bp = game.players[game.currentPlayer]
-                    if (bp.hand.length === 0) break
-                    const bc = selectBotCard(bp.hand, game.leadSuit, game.papayooSuit, game.currentTrick)
-                    bp.hand = bp.hand.filter(c => c.id !== bc.id)
-                    game.currentTrick.push({ playerId: bp.id, card: bc })
-                    game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
-                  }
-                }
+                game.message = `${game.players[winnerIndex].name} remporte le pli!`
+                // On garde currentTrick pour l'affichage
               }
             }
           }
@@ -620,28 +600,62 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Not in trick_end phase' })
         }
 
+        // Vider le pli et passer à playing
         game.currentTrick = []
         game.leadSuit = null
         game.phase = 'playing'
-        game.message = `C'est au tour de ${game.players[game.currentPlayer].name}`
         game.lastUpdate = Date.now()
 
-        // Si le prochain joueur est un bot, le faire jouer
-        const nextPlayer = game.players[game.currentPlayer]
-        if (nextPlayer.isBot && nextPlayer.hand.length > 0) {
-          const botCard = selectBotCard(nextPlayer.hand, null, game.papayooSuit, [])
-          nextPlayer.hand = nextPlayer.hand.filter(c => c.id !== botCard.id)
-          game.currentTrick.push({ playerId: nextPlayer.id, card: botCard })
+        // Le gagnant du pli ouvre le suivant
+        const currentPlayer = game.players[game.currentPlayer]
+        game.message = `C'est au tour de ${currentPlayer.name}`
+
+        // Si le gagnant est un bot, le faire jouer immédiatement
+        if (currentPlayer.isBot && currentPlayer.hand.length > 0) {
+          const botCard = selectBotCard(currentPlayer.hand, null, game.papayooSuit, [])
+          currentPlayer.hand = currentPlayer.hand.filter(c => c.id !== botCard.id)
+          game.currentTrick.push({ playerId: currentPlayer.id, card: botCard })
           game.leadSuit = botCard.suit
           game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
 
           // Faire jouer les bots suivants
-          while (game.players[game.currentPlayer].isBot && game.currentTrick.length < game.playerCount) {
-            const bp = game.players[game.currentPlayer]
-            const bc = selectBotCard(bp.hand, game.leadSuit, game.papayooSuit, game.currentTrick)
-            bp.hand = bp.hand.filter(c => c.id !== bc.id)
-            game.currentTrick.push({ playerId: bp.id, card: bc })
+          while (game.currentTrick.length < game.playerCount) {
+            const np = game.players[game.currentPlayer]
+            if (!np.isBot) break
+            if (np.hand.length === 0) break
+
+            const bc = selectBotCard(np.hand, game.leadSuit, game.papayooSuit, game.currentTrick)
+            np.hand = np.hand.filter(c => c.id !== bc.id)
+            game.currentTrick.push({ playerId: np.id, card: bc })
             game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
+          }
+
+          // Vérifier si le pli est complet après les bots
+          if (game.currentTrick.length === game.playerCount) {
+            const winnerId = determineTrickWinner(game.currentTrick, game.leadSuit)
+            const winnerIndex = game.players.findIndex(p => p.id === winnerId)
+            const trickCards = game.currentTrick.map(t => t.card)
+            game.players[winnerIndex].collectedCards.push(...trickCards)
+            game.trickCount++
+
+            const allEmpty = game.players.every(p => p.hand.length === 0)
+            if (allEmpty) {
+              game.players = game.players.map(p => {
+                const rp = calculateTrickPoints(p.collectedCards, game.papayooSuit)
+                return { ...p, lastRoundPoints: rp, score: p.score + rp, collectedCards: [] }
+              })
+              const over = game.roundNumber >= game.maxRounds
+              game.phase = over ? 'game_end' : 'round_end'
+              game.message = over ? 'Partie terminée!' : 'Manche terminée!'
+              game.currentTrick = []
+              game.leadSuit = null
+            } else {
+              // Nouveau trick_end
+              game.phase = 'trick_end'
+              game.trickWinner = winnerIndex
+              game.currentPlayer = winnerIndex
+              game.message = `${game.players[winnerIndex].name} remporte le pli!`
+            }
           }
         }
 
