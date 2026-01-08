@@ -58,34 +58,33 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }, [fetchGameState])
 
-  // Collecter le pli automatiquement après un délai
-  const collectTrick = useCallback(async () => {
-    if (game?.phase !== 'trick_end') return
+  // État local pour afficher le dernier pli avec un délai
+  const [displayedTrick, setDisplayedTrick] = useState([])
+  const [trickWinnerMessage, setTrickWinnerMessage] = useState(null)
+  const lastTrickIdRef = useRef(null)
 
-    try {
-      const response = await fetch(`${API_BASE}?action=collectTrick`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode: currentRoom })
-      })
-      const data = await response.json()
-      if (data.success) {
-        setGame(data.game)
-      }
-    } catch (err) {
-      console.error('CollectTrick error:', err)
-    }
-  }, [game?.phase, currentRoom])
-
-  // Auto-collecter le pli après 2 secondes quand on est en trick_end
+  // Gérer l'affichage du dernier pli avec délai
   useEffect(() => {
-    if (game?.phase === 'trick_end') {
-      const timer = setTimeout(() => {
-        collectTrick()
-      }, 2000) // 2 secondes pour voir qui a gagné
-      return () => clearTimeout(timer)
+    if (game?.lastTrick && game.lastTrick.length > 0) {
+      // Créer un ID unique pour ce pli
+      const trickId = game.lastTrick.map(t => t.card.id).join('-')
+
+      if (trickId !== lastTrickIdRef.current) {
+        lastTrickIdRef.current = trickId
+        // Afficher le pli terminé
+        setDisplayedTrick(game.lastTrick)
+        setTrickWinnerMessage(game.message)
+
+        // Effacer après 2 secondes
+        const timer = setTimeout(() => {
+          setDisplayedTrick([])
+          setTrickWinnerMessage(null)
+        }, 2000)
+
+        return () => clearTimeout(timer)
+      }
     }
-  }, [game?.phase, collectTrick])
+  }, [game?.lastTrick, game?.message])
 
   // Trouver le joueur actuel
   const currentPlayerData = game?.players?.find(p => p.id === playerId)
@@ -283,6 +282,53 @@ function MultiplayerGame({ onBackToMenu }) {
     )
   }
 
+  // Phase résultat du dé - montré à tous les joueurs
+  if (game.phase === 'die_result') {
+    const suitInfo = SUIT_DISPLAY[game.papayooSuit]
+
+    // Auto-confirmer après 3 secondes
+    const confirmDie = async () => {
+      try {
+        await fetch(`${API_BASE}?action=confirmDie`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomCode: currentRoom })
+        })
+      } catch (err) {
+        console.error('ConfirmDie error:', err)
+      }
+    }
+
+    // Utiliser un timeout pour auto-confirmer (géré par le premier joueur qui le voit)
+    setTimeout(() => {
+      if (game.phase === 'die_result') {
+        confirmDie()
+      }
+    }, 3000)
+
+    return (
+      <div className="game-board die-phase">
+        <ConfirmExitModal />
+        <div className="die-container">
+          <h2>🎲 Résultat du dé</h2>
+          <div style={{
+            fontSize: '80px',
+            margin: '30px 0',
+            color: suitInfo?.color
+          }}>
+            {suitInfo?.symbol}
+          </div>
+          <p style={{ fontSize: '24px', fontWeight: 'bold', color: suitInfo?.color }}>
+            {suitInfo?.name}
+          </p>
+          <p className="die-instruction" style={{ marginTop: '20px' }}>
+            Le 7 de {suitInfo?.name} vaut 40 points !
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   // Fin de manche
   if (game.phase === 'round_end') {
     return (
@@ -336,6 +382,15 @@ function MultiplayerGame({ onBackToMenu }) {
     playerId: game.players.findIndex(p => p.id === play.playerId),
     card: play.card
   })) || []
+
+  // Transformer displayedTrick (dernier pli terminé) pour l'affichage avec délai
+  const formattedDisplayedTrick = displayedTrick?.map(play => ({
+    playerId: game.players.findIndex(p => p.id === play.playerId),
+    card: play.card
+  })) || []
+
+  // Utiliser displayedTrick s'il y en a un, sinon currentTrick
+  const trickToShow = displayedTrick.length > 0 ? formattedDisplayedTrick : formattedTrick
 
   const papayooInfo = game.papayooSuit ? SUIT_DISPLAY[game.papayooSuit] : null
   const roundDisplay = game.maxRounds === 'infinite'
@@ -409,19 +464,19 @@ function MultiplayerGame({ onBackToMenu }) {
             })}
           </div>
 
-          {/* Plateau de jeu - affiché pendant playing ET trick_end */}
-          {(game.phase === 'playing' || game.phase === 'trick_end') && (
+          {/* Plateau de jeu */}
+          {game.phase === 'playing' && (
             <>
               <TrickArea
-                currentTrick={formattedTrick}
+                currentTrick={trickToShow}
                 playerCount={game.playerCount}
                 papayooSuit={game.papayooSuit}
                 leadSuit={game.leadSuit}
                 onCardDrop={handleCardDrop}
-                isPlayerTurn={isMyTurn && game.phase === 'playing' && game.currentTrick.length < game.playerCount}
+                isPlayerTurn={isMyTurn && displayedTrick.length === 0 && game.currentTrick.length < game.playerCount}
               />
               {/* Message du gagnant du pli */}
-              {game.phase === 'trick_end' && (
+              {trickWinnerMessage && displayedTrick.length > 0 && (
                 <div className="trick-winner-message" style={{
                   textAlign: 'center',
                   marginTop: '15px',
@@ -432,7 +487,7 @@ function MultiplayerGame({ onBackToMenu }) {
                   fontWeight: 'bold',
                   fontSize: '16px'
                 }}>
-                  🏆 {game.message}
+                  🏆 {trickWinnerMessage}
                 </div>
               )}
             </>
@@ -477,13 +532,13 @@ function MultiplayerGame({ onBackToMenu }) {
 
         {/* Panneau droit - Info du tour */}
         <aside className="side-panel right">
-          {(game.phase === 'playing' || game.phase === 'trick_end') && (
+          {game.phase === 'playing' && (
             <div className="turn-info">
-              <h4>{game.phase === 'trick_end' ? 'Pli terminé' : 'Tour en cours'}</h4>
+              <h4>{displayedTrick.length > 0 ? 'Pli terminé' : 'Tour en cours'}</h4>
               <div className={`current-player ${isMyTurn ? 'is-you' : ''}`}>
                 <span className="player-indicator" />
                 <span>{game.players[game.currentPlayer]?.name}</span>
-                {isMyTurn && game.phase === 'playing' && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
+                {isMyTurn && displayedTrick.length === 0 && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
               </div>
               {game.leadSuit && (
                 <div className="lead-suit-info">
