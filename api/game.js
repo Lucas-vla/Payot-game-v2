@@ -460,6 +460,88 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, game })
       }
 
+      // Continuer après l'affichage d'un pli terminé (fait jouer le bot gagnant si nécessaire)
+      case 'continueAfterTrick': {
+        if (req.method !== 'POST') {
+          return res.status(405).json({ error: 'Method not allowed' })
+        }
+
+        const { roomCode } = req.body
+        const code = roomCode?.toUpperCase().trim()
+        let game = await getGame(code)
+
+        if (!game) {
+          return res.status(404).json({ error: 'Game not found' })
+        }
+
+        if (game.phase !== 'playing') {
+          return res.status(400).json({ error: 'Not in playing phase' })
+        }
+
+        // Effacer le lastTrick
+        game.lastTrick = null
+        game.lastTrickWinner = null
+        game.lastTrickTime = null
+
+        // Si c'est au tour d'un bot et que le pli est vide, le faire jouer
+        const currentPlayer = game.players[game.currentPlayer]
+        if (currentPlayer.isBot && game.currentTrick.length === 0 && currentPlayer.hand.length > 0) {
+          // Le bot ouvre le pli
+          const botCard = selectBotCard(currentPlayer.hand, null, game.papayooSuit, [])
+          currentPlayer.hand = currentPlayer.hand.filter(c => c.id !== botCard.id)
+          game.currentTrick.push({ playerId: currentPlayer.id, card: botCard })
+          game.leadSuit = botCard.suit
+          game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
+          game.message = `${currentPlayer.name} ouvre le pli`
+
+          // Faire jouer les bots suivants
+          while (game.currentTrick.length < game.playerCount) {
+            const np = game.players[game.currentPlayer]
+            if (!np.isBot) break
+            if (np.hand.length === 0) break
+            const bc = selectBotCard(np.hand, game.leadSuit, game.papayooSuit, game.currentTrick)
+            np.hand = np.hand.filter(c => c.id !== bc.id)
+            game.currentTrick.push({ playerId: np.id, card: bc })
+            game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
+          }
+
+          // Vérifier si le pli est complet après les bots
+          if (game.currentTrick.length === game.playerCount) {
+            const winnerId = determineTrickWinner(game.currentTrick, game.leadSuit)
+            const winnerIndex = game.players.findIndex(p => p.id === winnerId)
+            const trickCards = game.currentTrick.map(t => t.card)
+            game.players[winnerIndex].collectedCards.push(...trickCards)
+            game.trickCount++
+
+            const allEmpty = game.players.every(p => p.hand.length === 0)
+            if (allEmpty) {
+              game.players = game.players.map(p => {
+                const rp = calculateTrickPoints(p.collectedCards, game.papayooSuit)
+                return { ...p, lastRoundPoints: rp, score: p.score + rp, collectedCards: [] }
+              })
+              const over = game.roundNumber >= game.maxRounds
+              game.phase = over ? 'game_end' : 'round_end'
+              game.message = over ? 'Partie terminée!' : 'Manche terminée!'
+              game.currentTrick = []
+              game.leadSuit = null
+            } else {
+              // Nouveau pli terminé à afficher
+              game.lastTrick = [...game.currentTrick]
+              game.lastTrickWinner = winnerIndex
+              game.lastTrickTime = Date.now()
+              game.currentTrick = []
+              game.leadSuit = null
+              game.currentPlayer = winnerIndex
+              game.message = `${game.players[winnerIndex].name} remporte le pli!`
+            }
+          }
+        }
+
+        game.lastUpdate = Date.now()
+        await setGame(code, game)
+        return res.status(200).json({ success: true, game })
+      }
+
       // Jouer une carte
       case 'playCard': {
         if (req.method !== 'POST') {
@@ -542,15 +624,15 @@ export default async function handler(req, res) {
             game.currentTrick = []
             game.leadSuit = null
           } else {
-            // Garder les cartes du pli pour affichage avec délai côté client
-            // Le frontend attendra avant de vider visuellement
-            game.lastTrick = [...game.currentTrick] // Sauvegarder le dernier pli
+            // Sauvegarder le pli pour affichage avec délai côté client
+            game.lastTrick = [...game.currentTrick]
             game.lastTrickWinner = winnerIndex
+            game.lastTrickTime = Date.now()
             game.currentTrick = []
             game.leadSuit = null
             game.currentPlayer = winnerIndex
             game.message = `${game.players[winnerIndex].name} remporte le pli!`
-            // La phase reste 'playing'
+            // Ne PAS faire jouer le bot ici - attendre que le client appelle 'continueAfterTrick'
           }
         } else {
           // Joueur suivant
@@ -598,32 +680,12 @@ export default async function handler(req, res) {
                 // Sauvegarder le pli pour affichage avec délai
                 game.lastTrick = [...game.currentTrick]
                 game.lastTrickWinner = winnerIndex
+                game.lastTrickTime = Date.now()
                 game.currentTrick = []
                 game.leadSuit = null
                 game.currentPlayer = winnerIndex
                 game.message = `${game.players[winnerIndex].name} remporte le pli!`
-                // La phase reste 'playing'
-
-                // Si le gagnant est un bot, le faire jouer
-                const winner = game.players[winnerIndex]
-                if (winner.isBot && winner.hand.length > 0) {
-                  const botCard = selectBotCard(winner.hand, null, game.papayooSuit, [])
-                  winner.hand = winner.hand.filter(c => c.id !== botCard.id)
-                  game.currentTrick.push({ playerId: winner.id, card: botCard })
-                  game.leadSuit = botCard.suit
-                  game.currentPlayer = (winnerIndex + 1) % game.playerCount
-
-                  // Faire jouer les bots suivants
-                  while (game.currentTrick.length < game.playerCount) {
-                    const np = game.players[game.currentPlayer]
-                    if (!np.isBot) break
-                    if (np.hand.length === 0) break
-                    const bc = selectBotCard(np.hand, game.leadSuit, game.papayooSuit, game.currentTrick)
-                    np.hand = np.hand.filter(c => c.id !== bc.id)
-                    game.currentTrick.push({ playerId: np.id, card: bc })
-                    game.currentPlayer = (game.currentPlayer + 1) % game.playerCount
-                  }
-                }
+                // Ne PAS faire jouer le bot ici - attendre 'continueAfterTrick'
               }
             }
           }

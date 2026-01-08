@@ -63,6 +63,23 @@ function MultiplayerGame({ onBackToMenu }) {
   const [trickWinnerMessage, setTrickWinnerMessage] = useState(null)
   const lastTrickIdRef = useRef(null)
 
+  // Appeler le serveur pour continuer après l'affichage du pli
+  const continueAfterTrick = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}?action=continueAfterTrick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomCode: currentRoom })
+      })
+      const data = await response.json()
+      if (data.success) {
+        setGame(data.game)
+      }
+    } catch (err) {
+      console.error('ContinueAfterTrick error:', err)
+    }
+  }, [currentRoom])
+
   // Gérer l'affichage du dernier pli avec délai
   useEffect(() => {
     if (game?.lastTrick && game.lastTrick.length > 0) {
@@ -75,16 +92,19 @@ function MultiplayerGame({ onBackToMenu }) {
         setDisplayedTrick(game.lastTrick)
         setTrickWinnerMessage(game.message)
 
-        // Effacer après 2 secondes
-        const timer = setTimeout(() => {
+        // Après 2 secondes, effacer l'affichage et continuer le jeu
+        const timer = setTimeout(async () => {
           setDisplayedTrick([])
           setTrickWinnerMessage(null)
+          lastTrickIdRef.current = null
+          // Appeler le serveur pour faire jouer le bot si nécessaire
+          await continueAfterTrick()
         }, 2000)
 
         return () => clearTimeout(timer)
       }
     }
-  }, [game?.lastTrick, game?.message])
+  }, [game?.lastTrick, game?.message, continueAfterTrick])
 
   // Trouver le joueur actuel
   const currentPlayerData = game?.players?.find(p => p.id === playerId)
