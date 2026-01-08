@@ -89,7 +89,12 @@ export function MultiplayerProvider({ children }) {
     setIsLoading(true)
     setError(null)
 
+    // Réinitialiser l'état de démarrage
+    gameStartedRef.current = false
+    setGameStarted(false)
+
     try {
+      console.log('Creating room as host:', playerId)
       const response = await fetch(`${API_BASE}?action=create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -101,6 +106,7 @@ export function MultiplayerProvider({ children }) {
       })
 
       const data = await response.json()
+      console.log('Create room response:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Erreur lors de la création')
@@ -127,8 +133,14 @@ export function MultiplayerProvider({ children }) {
     setIsLoading(true)
     setError(null)
 
+    // Réinitialiser l'état de démarrage
+    gameStartedRef.current = false
+    setGameStarted(false)
+
     try {
       const code = roomCode.toUpperCase().trim()
+      console.log('Joining room:', code, 'as player:', playerId)
+
       const response = await fetch(`${API_BASE}?action=join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,6 +152,7 @@ export function MultiplayerProvider({ children }) {
       })
 
       const data = await response.json()
+      console.log('Join response:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Erreur lors de la connexion')
@@ -150,6 +163,8 @@ export function MultiplayerProvider({ children }) {
       setRoomPlayers(data.room.players)
       setIsHost(data.room.hostId === playerId)
       updatePlayerName(playerName)
+
+      console.log('Starting polling after join...')
       startPolling(code)
 
       return true
