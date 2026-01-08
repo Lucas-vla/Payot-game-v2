@@ -560,13 +560,15 @@ export default async function handler(req, res) {
                 const over = game.roundNumber >= game.maxRounds
                 game.phase = over ? 'game_end' : 'round_end'
                 game.message = over ? 'Partie terminée!' : 'Manche terminée!'
+                // Vider le pli seulement pour round_end et game_end
+                game.currentTrick = []
+                game.leadSuit = null
               } else {
                 game.phase = 'trick_end'
                 game.message = `${game.players[winnerIndex].name} remporte le pli`
                 game.currentPlayer = winnerIndex
+                // NE PAS vider currentTrick ici - on veut l'afficher
               }
-              game.currentTrick = []
-              game.leadSuit = null
             }
           }
         }
