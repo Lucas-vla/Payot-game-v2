@@ -37,12 +37,19 @@ function AppContent() {
 
   // Détecter quand la partie démarre (pour les joueurs non-hôtes)
   useEffect(() => {
+    console.log('Effect check - gameStarted:', multiplayer.gameStarted, 'mode:', mode)
+
     if (multiplayer.gameStarted && mode === MODES.LOBBY) {
-      console.log('Switching to multiplayer mode!')
+      console.log('🎮 Switching to multiplayer mode!')
       // La partie a démarré, basculer vers le mode multijoueur
-      multiplayer.stopPolling()
-      multiplayer.resetGameStarted()
+      // Important: d'abord changer le mode, puis reset
       setMode(MODES.MULTIPLAYER)
+
+      // Utiliser setTimeout pour éviter les conflits de state
+      setTimeout(() => {
+        multiplayer.stopPolling()
+        multiplayer.resetGameStarted()
+      }, 100)
     }
   }, [multiplayer.gameStarted, mode])
 

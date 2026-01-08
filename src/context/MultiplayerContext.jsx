@@ -38,6 +38,8 @@ export function MultiplayerProvider({ children }) {
 
   // Polling pour récupérer les mises à jour de la room
   const startPolling = useCallback((roomCode) => {
+    console.log('Starting polling for room:', roomCode)
+
     if (pollingRef.current) {
       clearInterval(pollingRef.current)
     }
@@ -52,9 +54,10 @@ export function MultiplayerProvider({ children }) {
           setRoomPlayers(data.room.players)
           setIsHost(data.room.hostId === playerId)
 
-          // Détecter si la partie a démarré (utiliser la ref pour éviter closure stale)
+          // Détecter si la partie a démarré
+          console.log('Room status:', data.room.status, 'gameStartedRef:', gameStartedRef.current)
           if (data.room.status === 'playing' && !gameStartedRef.current) {
-            console.log('Game started detected!')
+            console.log('🎮 Game started detected! Setting gameStarted to true')
             gameStartedRef.current = true
             setGameStarted(true)
           }
@@ -64,9 +67,9 @@ export function MultiplayerProvider({ children }) {
       }
     }
 
-    // Poll immédiatement puis toutes les 2 secondes
+    // Poll immédiatement puis toutes les 1.5 secondes
     poll()
-    pollingRef.current = setInterval(poll, 2000)
+    pollingRef.current = setInterval(poll, 1500)
   }, [playerId])
 
   const stopPolling = useCallback(() => {
@@ -246,6 +249,7 @@ export function MultiplayerProvider({ children }) {
     if (!currentRoom || !isHost) return false
 
     try {
+      console.log('Starting game for room:', currentRoom)
       const response = await fetch(`${API_BASE}?action=start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,6 +260,7 @@ export function MultiplayerProvider({ children }) {
       })
 
       const data = await response.json()
+      console.log('Start game response:', data)
 
       if (!response.ok) {
         setError(data.error)
@@ -264,7 +269,8 @@ export function MultiplayerProvider({ children }) {
 
       if (data.success && data.room) {
         setRoomData(data.room)
-        stopPolling()
+        // Ne pas stopper le polling ici - laisser les autres joueurs détecter le changement
+        // Le polling sera stoppé par l'appelant
         return true
       }
 
