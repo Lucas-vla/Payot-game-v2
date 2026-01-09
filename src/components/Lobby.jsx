@@ -39,8 +39,13 @@ function Lobby({
   }
 
   const shareLink = async () => {
-    // Construire l'URL complète avec le code d'invitation
-    const baseUrl = window.location.origin
+    // Utiliser l'URL de production ou l'origine actuelle
+    // En production Vercel, on préfère l'URL de production fixe
+    const productionUrl = 'https://payot-game-v2.vercel.app'
+    const currentOrigin = window.location.origin
+
+    // Utiliser l'URL de production si on est sur Vercel, sinon l'origine actuelle (dev local)
+    const baseUrl = currentOrigin.includes('vercel.app') ? productionUrl : currentOrigin
     const inviteUrl = `${baseUrl}?join=${roomCode}`
 
     console.log('Sharing URL:', inviteUrl) // Debug
@@ -63,6 +68,14 @@ function Lobby({
     }
   }
 
+  // URL affichée pour l'utilisateur
+  const getDisplayUrl = () => {
+    const productionUrl = 'https://payot-game-v2.vercel.app'
+    const currentOrigin = window.location.origin
+    const baseUrl = currentOrigin.includes('vercel.app') ? productionUrl : currentOrigin
+    return `${baseUrl}?join=${roomCode}`
+  }
+
   return (
     <div className="lobby">
       <div className="lobby-container">
@@ -83,7 +96,7 @@ function Lobby({
             {copied ? '✓ Lien copié!' : '🔗 Partager le lien'}
           </button>
           <p className="invite-hint" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
-            Lien: {window.location.origin}?join={roomCode}
+            Lien: {getDisplayUrl()}
           </p>
         </div>
 
