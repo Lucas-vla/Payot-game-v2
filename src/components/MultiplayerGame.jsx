@@ -19,6 +19,7 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
   const [selectedCards, setSelectedCards] = useState([])
   const [showConfirmExit, setShowConfirmExit] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [hasConfirmedPass, setHasConfirmedPass] = useState(false) // Pour suivre si le joueur a confirmé
   const pollingRef = useRef(null)
   const gameEndSavedRef = useRef(false) // Pour éviter les doublons
 
@@ -126,6 +127,14 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
     }
   }, [game?.phase, game?.players, game?.playerCount, game?.roundNumber, game?.maxRounds, playerId])
 
+  // Réinitialiser hasConfirmedPass quand la phase n'est plus "passing"
+  useEffect(() => {
+    if (game?.phase !== 'passing') {
+      setHasConfirmedPass(false)
+      setSelectedCards([])
+    }
+  }, [game?.phase])
+
   // Trouver le joueur actuel
   const currentPlayerData = game?.players?.find(p => p.id === playerId)
   const currentPlayerIndex = game?.players?.findIndex(p => p.id === playerId) ?? -1
@@ -172,6 +181,7 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
       if (data.success) {
         setGame(data.game)
         setSelectedCards([])
+        setHasConfirmedPass(true) // Marquer que le joueur a confirmé
       } else {
         setError(data.error)
       }
@@ -572,7 +582,7 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
                 <h3>Passage des cartes</h3>
 
                 {/* Message d'attente si le joueur a déjà confirmé */}
-                {currentPlayerData.cardsToPass?.length === cardsToPass ? (
+                {hasConfirmedPass ? (
                   <div style={{
                     background: 'rgba(76, 175, 80, 0.2)',
                     border: '1px solid rgba(76, 175, 80, 0.5)',
@@ -615,7 +625,7 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
                 </div>
 
                 {/* Bouton de confirmation - masqué si déjà confirmé */}
-                {currentPlayerData.cardsToPass?.length !== cardsToPass && (
+                {!hasConfirmedPass && (
                   <button
                     className="pass-btn"
                     onClick={handleConfirmPass}
