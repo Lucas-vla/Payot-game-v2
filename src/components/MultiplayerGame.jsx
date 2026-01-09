@@ -7,12 +7,13 @@ import TrickArea from './TrickArea'
 import ScoreBoard from './ScoreBoard'
 import Die from './Die'
 import History from './History'
+import Chat from './Chat'
 import './GameBoard.css'  // Utiliser le même CSS que GameBoard
 
 const API_BASE = '/api/game'
 
 function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
-  const { currentRoom, playerId, roomData } = useMultiplayer()
+  const { currentRoom, playerId, roomData, playerName } = useMultiplayer()
   const [game, setGame] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -920,6 +921,14 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
           />
         </footer>
       )}
+
+      {/* Chat */}
+      <Chat
+        roomCode={currentRoom}
+        playerId={playerId}
+        playerName={playerName || currentPlayerData?.name || 'Joueur'}
+        isMinimized={true}
+      />
     </div>
   )
 }

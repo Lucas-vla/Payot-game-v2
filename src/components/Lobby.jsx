@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import Chat from './Chat'
 import './Lobby.css'
 
 function Lobby({
@@ -184,6 +185,13 @@ function Lobby({
           )}
         </div>
       </div>
+
+      {/* Chat */}
+      <Chat
+        roomCode={roomCode}
+        playerId={currentPlayerId}
+        playerName={currentPlayer?.name || 'Joueur'}
+      />
     </div>
   )
 }
