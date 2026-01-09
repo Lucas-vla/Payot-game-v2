@@ -38,18 +38,42 @@ function Lobby({
     }
   }
 
-  const shareLink = () => {
-    const url = `${window.location.origin}?join=${roomCode}`
-    if (navigator.share) {
-      navigator.share({
-        title: 'Rejoins ma partie de Papayoo!',
-        text: `Code de la partie: ${roomCode}`,
-        url: url
-      })
-    } else {
-      navigator.clipboard.writeText(url)
+  const shareLink = async () => {
+    // Construire l'URL complète avec le code d'invitation
+    const baseUrl = window.location.origin
+    const inviteUrl = `${baseUrl}?join=${roomCode}`
+
+    console.log('Sharing URL:', inviteUrl) // Debug
+
+    // Essayer de copier dans le presse-papier d'abord
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      // Fallback si clipboard ne marche pas
+      const input = document.createElement('input')
+      input.value = inviteUrl
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+
+    // Si l'API de partage native est disponible, l'utiliser aussi
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Rejoins ma partie de Papayoo!',
+          text: `Rejoins ma partie de Papayoo!\nCode: ${roomCode}\nLien: ${inviteUrl}`,
+          url: inviteUrl
+        })
+      } catch (err) {
+        // L'utilisateur a annulé le partage ou erreur - pas grave, le lien est déjà copié
+        console.log('Share cancelled or failed:', err)
+      }
     }
   }
 
@@ -70,8 +94,11 @@ function Lobby({
             </button>
           </div>
           <button className="share-btn" onClick={shareLink}>
-            🔗 Partager le lien
+            {copied ? '✓ Lien copié!' : '🔗 Partager le lien'}
           </button>
+          <p className="invite-hint" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
+            Lien: {window.location.origin}?join={roomCode}
+          </p>
         </div>
 
         {/* Liste des joueurs */}
