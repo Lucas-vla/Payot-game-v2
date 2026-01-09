@@ -61,6 +61,13 @@ export function MultiplayerProvider({ children }) {
             gameStartedRef.current = true
             setGameStarted(true)
           }
+
+          // Réinitialiser gameStartedRef quand la room repasse à waiting (retour au lobby)
+          if (data.room.status === 'waiting' && gameStartedRef.current) {
+            console.log('🔄 Room back to waiting, resetting gameStarted')
+            gameStartedRef.current = false
+            setGameStarted(false)
+          }
         }
       } catch (err) {
         console.error('Polling error:', err)

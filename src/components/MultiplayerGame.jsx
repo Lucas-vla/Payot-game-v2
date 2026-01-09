@@ -570,33 +570,61 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
             <div className="pass-area">
               <div className="pass-card">
                 <h3>Passage des cartes</h3>
-                <p>Sélectionnez {cardsToPass} cartes à passer à votre voisin</p>
-                <div className="pass-progress">
-                  <div
-                    className="pass-progress-bar"
-                    style={{ '--progress': selectedCards.length / cardsToPass }}
-                  />
-                  <span>{selectedCards.length} / {cardsToPass}</span>
-                </div>
+
+                {/* Message d'attente si le joueur a déjà confirmé */}
+                {currentPlayerData.cardsToPass?.length === cardsToPass ? (
+                  <div style={{
+                    background: 'rgba(76, 175, 80, 0.2)',
+                    border: '1px solid rgba(76, 175, 80, 0.5)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginBottom: '15px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '40px', marginBottom: '10px' }}>⏳</div>
+                    <p style={{ color: '#4caf50', fontWeight: 'bold', fontSize: '16px', margin: 0 }}>
+                      En attente des autres joueurs...
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', marginTop: '10px' }}>
+                      Vos cartes ont été sélectionnées
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p>Sélectionnez {cardsToPass} cartes à passer à votre voisin</p>
+                    <div className="pass-progress">
+                      <div
+                        className="pass-progress-bar"
+                        style={{ '--progress': selectedCards.length / cardsToPass }}
+                      />
+                      <span>{selectedCards.length} / {cardsToPass}</span>
+                    </div>
+                  </>
+                )}
 
                 {/* Statut des autres joueurs */}
-                <div className="pass-status">
+                <div className="pass-status" style={{ marginTop: '15px' }}>
+                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
+                    Statut des joueurs:
+                  </p>
                   {game.players.map(p => (
                     <span key={p.id} className={`status-dot ${p.cardsToPass?.length === cardsToPass ? 'ready' : ''}`}>
-                      {p.name}: {p.cardsToPass?.length === cardsToPass ? '✓' : '...'}
+                      {p.name}: {p.cardsToPass?.length === cardsToPass ? '✓ Prêt' : '⏳'}
                     </span>
                   ))}
                 </div>
 
-                <button
-                  className="pass-btn"
-                  onClick={handleConfirmPass}
-                  disabled={selectedCards.length !== cardsToPass || currentPlayerData.cardsToPass?.length === cardsToPass}
-                >
-                  {currentPlayerData.cardsToPass?.length === cardsToPass
-                    ? 'En attente des autres...'
-                    : 'Confirmer le passage →'}
-                </button>
+                {/* Bouton de confirmation - masqué si déjà confirmé */}
+                {currentPlayerData.cardsToPass?.length !== cardsToPass && (
+                  <button
+                    className="pass-btn"
+                    onClick={handleConfirmPass}
+                    disabled={selectedCards.length !== cardsToPass}
+                    style={{ marginTop: '15px' }}
+                  >
+                    Confirmer le passage →
+                  </button>
+                )}
               </div>
             </div>
           )}

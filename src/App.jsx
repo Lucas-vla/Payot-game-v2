@@ -53,6 +53,14 @@ function AppContent() {
     }
   }, [multiplayer.gameStarted, mode])
 
+  // Détecter quand la room repasse à waiting (retour au lobby depuis le jeu)
+  useEffect(() => {
+    if (mode === MODES.MULTIPLAYER && multiplayer.roomData?.status === 'waiting') {
+      console.log('🔄 Room is waiting, switching back to lobby!')
+      setMode(MODES.LOBBY)
+    }
+  }, [mode, multiplayer.roomData?.status])
+
   // Gérer le retour au menu
   const handleBackToMenu = () => {
     if (multiplayer.currentRoom) {
