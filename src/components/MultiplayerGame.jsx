@@ -776,33 +776,33 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
             })}
           </div>
 
+          {/* Message du gagnant du pli - affiché sous les joueurs */}
+          {showTrickResult && trickWinnerMessage && (
+            <div className="trick-winner-message" style={{
+              textAlign: 'center',
+              margin: '10px auto 15px',
+              padding: '10px 25px',
+              backgroundColor: 'rgba(76, 175, 80, 0.3)',
+              borderRadius: '10px',
+              color: '#4caf50',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              maxWidth: '300px'
+            }}>
+              🏆 {trickWinnerMessage}
+            </div>
+          )}
+
           {/* Plateau de jeu */}
           {game.phase === 'playing' && (
-            <>
-              <TrickArea
-                currentTrick={formattedTrick}
-                playerCount={game.playerCount}
-                papayooSuit={game.papayooSuit}
-                leadSuit={game.leadSuit}
-                onCardDrop={handleCardDrop}
-                isPlayerTurn={isMyTurn && !game.trickComplete && game.currentTrick.length < game.playerCount}
-              />
-              {/* Message du gagnant du pli */}
-              {showTrickResult && trickWinnerMessage && (
-                <div className="trick-winner-message" style={{
-                  textAlign: 'center',
-                  marginTop: '15px',
-                  padding: '10px 20px',
-                  backgroundColor: 'rgba(76, 175, 80, 0.3)',
-                  borderRadius: '10px',
-                  color: '#4caf50',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}>
-                  🏆 {trickWinnerMessage}
-                </div>
-              )}
-            </>
+            <TrickArea
+              currentTrick={formattedTrick}
+              playerCount={game.playerCount}
+              papayooSuit={game.papayooSuit}
+              leadSuit={game.leadSuit}
+              onCardDrop={handleCardDrop}
+              isPlayerTurn={isMyTurn && !game.trickComplete && game.currentTrick.length < game.playerCount}
+            />
           )}
 
           {/* Phase de passage */}
