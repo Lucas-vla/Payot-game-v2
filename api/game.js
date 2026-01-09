@@ -483,6 +483,24 @@ export default async function handler(req, res) {
           return res.status(200).json({ success: true, game })
         }
 
+        // Si c'est le dernier pli, passer à round_end ou game_end
+        if (game.isLastTrick) {
+          game.currentTrick = []
+          game.leadSuit = null
+          game.trickComplete = false
+          game.trickWinner = null
+          game.nextPlayer = null
+          game.isLastTrick = false
+
+          const over = game.roundNumber >= game.maxRounds
+          game.phase = over ? 'game_end' : 'round_end'
+          game.message = over ? 'Partie terminée!' : 'Manche terminée!'
+
+          game.lastUpdate = Date.now()
+          await setGame(code, game)
+          return res.status(200).json({ success: true, game })
+        }
+
         // Vider le pli et passer au joueur gagnant
         game.currentTrick = []
         game.leadSuit = null
@@ -614,7 +632,7 @@ export default async function handler(req, res) {
           const allHandsEmpty = game.players.every(p => p.hand.length === 0)
 
           if (allHandsEmpty) {
-            // Calculer les scores
+            // Calculer les scores mais garder le pli visible d'abord
             game.players = game.players.map(p => {
               const roundPoints = calculateTrickPoints(p.collectedCards, game.papayooSuit)
               return {
@@ -625,13 +643,13 @@ export default async function handler(req, res) {
               }
             })
 
-            // Vérifier fin de partie
-            const gameOver = game.roundNumber >= game.maxRounds
-
-            game.phase = gameOver ? 'game_end' : 'round_end'
-            game.message = gameOver ? 'Partie terminée!' : 'Manche terminée!'
-            game.currentTrick = []
-            game.leadSuit = null
+            // Marquer le pli comme terminé pour l'affichage
+            // Le client appellera continueAfterTrick qui passera à round_end/game_end
+            game.trickComplete = true
+            game.trickWinner = winnerIndex
+            game.nextPlayer = winnerIndex
+            game.isLastTrick = true // Flag pour indiquer que c'est le dernier pli
+            game.message = `${game.players[winnerIndex].name} remporte le dernier pli!`
           } else {
             // NE PAS vider currentTrick - garder les cartes visibles pour l'affichage
             // Marquer le pli comme terminé avec le gagnant
@@ -678,11 +696,12 @@ export default async function handler(req, res) {
                   const rp = calculateTrickPoints(p.collectedCards, game.papayooSuit)
                   return { ...p, lastRoundPoints: rp, score: p.score + rp, collectedCards: [] }
                 })
-                const over = game.roundNumber >= game.maxRounds
-                game.phase = over ? 'game_end' : 'round_end'
-                game.message = over ? 'Partie terminée!' : 'Manche terminée!'
-                game.currentTrick = []
-                game.leadSuit = null
+                // Marquer le pli comme terminé pour l'affichage (dernier pli)
+                game.trickComplete = true
+                game.trickWinner = winnerIndex
+                game.nextPlayer = winnerIndex
+                game.isLastTrick = true
+                game.message = `${game.players[winnerIndex].name} remporte le dernier pli!`
               } else {
                 // NE PAS vider currentTrick - garder les cartes visibles
                 game.trickComplete = true

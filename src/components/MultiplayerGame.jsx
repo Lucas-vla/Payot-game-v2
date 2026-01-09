@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useMultiplayer } from '../context/MultiplayerContext'
 import { SUIT_DISPLAY } from '../utils/deck'
+import { saveGameToHistory } from '../utils/history'
 import Hand from './Hand'
 import TrickArea from './TrickArea'
 import ScoreBoard from './ScoreBoard'
 import Die from './Die'
+import History from './History'
 import './GameBoard.css'  // Utiliser le même CSS que GameBoard
 
 const API_BASE = '/api/game'
@@ -16,7 +18,9 @@ function MultiplayerGame({ onBackToMenu }) {
   const [error, setError] = useState(null)
   const [selectedCards, setSelectedCards] = useState([])
   const [showConfirmExit, setShowConfirmExit] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const pollingRef = useRef(null)
+  const gameEndSavedRef = useRef(false) // Pour éviter les doublons
 
   // Initialiser ou récupérer le jeu
   const fetchGameState = useCallback(async () => {
@@ -102,6 +106,25 @@ function MultiplayerGame({ onBackToMenu }) {
       lastTrickCompleteRef.current = false
     }
   }, [game?.trickComplete, game?.message, continueAfterTrick])
+
+  // Sauvegarder l'historique quand la partie se termine
+  useEffect(() => {
+    if (game?.phase === 'game_end' && !gameEndSavedRef.current) {
+      gameEndSavedRef.current = true
+      // Préparer les données pour l'historique
+      const gameData = {
+        playerCount: game.playerCount,
+        roundNumber: game.roundNumber,
+        maxRounds: game.maxRounds,
+        players: game.players.map(p => ({
+          name: p.name,
+          score: p.score,
+          isHuman: p.id === playerId
+        }))
+      }
+      saveGameToHistory(gameData)
+    }
+  }, [game?.phase, game?.players, game?.playerCount, game?.roundNumber, game?.maxRounds, playerId])
 
   // Trouver le joueur actuel
   const currentPlayerData = game?.players?.find(p => p.id === playerId)
@@ -412,12 +435,29 @@ function MultiplayerGame({ onBackToMenu }) {
   return (
     <div className="game-board playing">
       <ConfirmExitModal />
+      {showHistory && <History onClose={() => setShowHistory(false)} />}
 
       {/* Header */}
       <header className="game-header">
         <div className="header-left">
           <button className="back-btn" onClick={handleBackToMenuClick} title="Retour à l'accueil">
             ←
+          </button>
+          <button
+            className="history-btn-small"
+            onClick={() => setShowHistory(true)}
+            title="Historique"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              color: 'white',
+              cursor: 'pointer',
+              marginRight: '10px'
+            }}
+          >
+            📊
           </button>
           <span className="round-badge">{roundDisplay}</span>
         </div>
