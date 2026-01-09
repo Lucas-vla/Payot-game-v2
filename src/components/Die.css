@@ -217,12 +217,83 @@
 }
 
 /* Animations */
+@keyframes dieRoll3D {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+  }
+  10% {
+    transform: rotateX(90deg) rotateY(45deg) rotateZ(30deg) scale(0.9);
+  }
+  20% {
+    transform: rotateX(180deg) rotateY(90deg) rotateZ(60deg) scale(1.1);
+  }
+  30% {
+    transform: rotateX(270deg) rotateY(135deg) rotateZ(90deg) scale(0.95);
+  }
+  40% {
+    transform: rotateX(360deg) rotateY(180deg) rotateZ(120deg) scale(1.05);
+  }
+  50% {
+    transform: rotateX(450deg) rotateY(225deg) rotateZ(150deg) scale(0.9);
+  }
+  60% {
+    transform: rotateX(540deg) rotateY(270deg) rotateZ(180deg) scale(1.1);
+  }
+  70% {
+    transform: rotateX(630deg) rotateY(315deg) rotateZ(150deg) scale(0.95);
+  }
+  80% {
+    transform: rotateX(700deg) rotateY(340deg) rotateZ(120deg) scale(1.02);
+  }
+  90% {
+    transform: rotateX(715deg) rotateY(355deg) rotateZ(100deg) scale(1);
+  }
+  100% {
+    transform: rotateX(720deg) rotateY(360deg) rotateZ(90deg) scale(1);
+  }
+}
+
 @keyframes dieRoll {
   0% { transform: rotateX(0deg) rotateY(0deg) scale(1); }
   25% { transform: rotateX(15deg) rotateY(-15deg) scale(0.95); }
   50% { transform: rotateX(-10deg) rotateY(10deg) scale(1.05); }
   75% { transform: rotateX(10deg) rotateY(-10deg) scale(0.98); }
   100% { transform: rotateX(-5deg) rotateY(5deg) scale(1); }
+}
+
+@keyframes dieBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes dieShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  10% { transform: translateX(-10px) rotate(-5deg); }
+  20% { transform: translateX(10px) rotate(5deg); }
+  30% { transform: translateX(-10px) rotate(-5deg); }
+  40% { transform: translateX(10px) rotate(5deg); }
+  50% { transform: translateX(-5px) rotate(-2deg); }
+  60% { transform: translateX(5px) rotate(2deg); }
+  70% { transform: translateX(-5px) rotate(-2deg); }
+  80% { transform: translateX(5px) rotate(2deg); }
+  90% { transform: translateX(-2px) rotate(-1deg); }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5), 0 15px 35px rgba(0,0,0,0.3);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(255, 215, 0, 0.8), 0 0 100px rgba(255, 215, 0, 0.4), 0 15px 35px rgba(0,0,0,0.3);
+  }
+}
+
+@keyframes colorCycle {
+  0% { background: linear-gradient(145deg, #ff6b6b, #ee5a5a); }
+  25% { background: linear-gradient(145deg, #4ecdc4, #3db9b0); }
+  50% { background: linear-gradient(145deg, #ffe66d, #ffd93d); }
+  75% { background: linear-gradient(145deg, #6c5ce7, #5b4cdb); }
+  100% { background: linear-gradient(145deg, #ff6b6b, #ee5a5a); }
 }
 
 @keyframes revealBounce {

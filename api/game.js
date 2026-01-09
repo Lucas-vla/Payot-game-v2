@@ -444,13 +444,13 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, game })
       }
 
-      // Lancer le dé
+      // Lancer le dé - démarre l'animation pour tous les joueurs
       case 'rollDie': {
         if (req.method !== 'POST') {
           return res.status(405).json({ error: 'Method not allowed' })
         }
 
-        const { roomCode, papayooSuit } = req.body
+        const { roomCode } = req.body
         const code = roomCode?.toUpperCase().trim()
         let game = await getGame(code)
 
@@ -462,10 +462,37 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Not in rolling phase' })
         }
 
-        game.papayooSuit = papayooSuit || rollPapayooDie()
-        game.phase = 'die_result' // Phase intermédiaire pour montrer le résultat
+        // Déterminer le résultat mais passer en phase animation d'abord
+        game.papayooSuit = rollPapayooDie()
+        game.phase = 'die_rolling' // Phase d'animation visible par tous
         game.dieRolledAt = Date.now()
-        game.message = `Le Papayoo est ${game.papayooSuit}! Le 7 vaut 40 points!`
+        game.message = 'Le dé est lancé...'
+        game.lastUpdate = Date.now()
+
+        await setGame(code, game)
+        return res.status(200).json({ success: true, game })
+      }
+
+      // Révéler le résultat du dé après l'animation
+      case 'revealDie': {
+        if (req.method !== 'POST') {
+          return res.status(405).json({ error: 'Method not allowed' })
+        }
+
+        const { roomCode } = req.body
+        const code = roomCode?.toUpperCase().trim()
+        let game = await getGame(code)
+
+        if (!game) {
+          return res.status(404).json({ error: 'Game not found' })
+        }
+
+        if (game.phase !== 'die_rolling') {
+          return res.status(200).json({ success: true, game }) // Déjà révélé
+        }
+
+        game.phase = 'die_result'
+        game.message = `Le Payot est ${game.papayooSuit}! Le 7 vaut 40 points!`
         game.lastUpdate = Date.now()
 
         await setGame(code, game)

@@ -318,16 +318,146 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
     </div>
   )
 
-  // Phase de lancer de dé
+  // Phase de lancer de dé - en attente du clic
   if (game.phase === 'rolling_die') {
     return (
       <div className="game-board die-phase">
         <ConfirmExitModal />
         <div className="die-container">
-          <h2>Lancer le dé Papayoo</h2>
-          <p className="die-instruction">Cliquez sur le dé pour déterminer la couleur Papayoo</p>
+          <h2>🎲 Lancer le dé Payot</h2>
+          <p className="die-instruction">Cliquez sur le dé pour déterminer la couleur Payot</p>
           <Die onRoll={handleRollDie} result={null} />
         </div>
+      </div>
+    )
+  }
+
+  // Phase d'animation du dé - TOUS les joueurs voient cette animation
+  if (game.phase === 'die_rolling') {
+    // Auto-révéler après 3 secondes d'animation
+    setTimeout(async () => {
+      if (game.phase === 'die_rolling') {
+        try {
+          await fetch(`${API_BASE}?action=revealDie`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomCode: currentRoom })
+          })
+        } catch (err) {
+          console.error('RevealDie error:', err)
+        }
+      }
+    }, 3000)
+
+    return (
+      <div className="game-board die-phase">
+        <ConfirmExitModal />
+        <div className="die-container" style={{ perspective: '1000px' }}>
+          <h2 style={{
+            animation: 'pulse 1s ease-in-out infinite',
+            color: '#ffd700'
+          }}>🎲 Le dé est lancé!</h2>
+
+          <p className="die-instruction" style={{ marginBottom: '30px' }}>
+            Quelle couleur sera le Payot?
+          </p>
+
+          {/* Les 4 couleurs qui s'illuminent tour à tour */}
+          <div style={{
+            display: 'flex',
+            gap: '20px',
+            justifyContent: 'center',
+            marginBottom: '40px'
+          }}>
+            {['spade', 'heart', 'diamond', 'club'].map((suit, index) => {
+              const info = SUIT_DISPLAY[suit]
+              return (
+                <div
+                  key={suit}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '20px 25px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '20px',
+                    border: '3px solid rgba(255, 255, 255, 0.3)',
+                    animation: `optionGlow 0.5s ease-in-out infinite ${index * 0.125}s`,
+                  }}
+                >
+                  <span style={{
+                    fontSize: '45px',
+                    color: info.color,
+                    filter: 'drop-shadow(0 0 10px currentColor)'
+                  }}>{info.symbol}</span>
+                  <span style={{
+                    fontSize: '13px',
+                    color: 'rgba(255,255,255,0.8)',
+                    textTransform: 'uppercase',
+                    fontWeight: '600',
+                    letterSpacing: '1px'
+                  }}>{info.name}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Dé 3D animé */}
+          <div style={{
+            width: '160px',
+            height: '160px',
+            margin: '0 auto',
+            perspective: '600px',
+            transformStyle: 'preserve-3d'
+          }}>
+            <div style={{
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(145deg, #ffffff, #f0f0f0)',
+              borderRadius: '30px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 60px rgba(255, 215, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4)',
+              animation: 'dieRoll3D 0.8s ease-in-out infinite, glowPulse 1s ease-in-out infinite',
+              transformStyle: 'preserve-3d'
+            }}>
+              <span style={{
+                fontSize: '70px',
+                animation: 'dieShake 0.3s ease-in-out infinite'
+              }}>🎲</span>
+            </div>
+          </div>
+
+          <p style={{
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '18px',
+            marginTop: '30px',
+            animation: 'pulse 1.5s ease-in-out infinite'
+          }}>
+            ✨ Suspense... ✨
+          </p>
+        </div>
+
+        <style>{`
+          @keyframes optionGlow {
+            0%, 100% { 
+              opacity: 0.4; 
+              transform: scale(1);
+              box-shadow: none;
+            }
+            50% { 
+              opacity: 1; 
+              transform: scale(1.1);
+              box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            }
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+          }
+        `}</style>
       </div>
     )
   }
@@ -336,45 +466,145 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
   if (game.phase === 'die_result') {
     const suitInfo = SUIT_DISPLAY[game.papayooSuit]
 
-    // Auto-confirmer après 3 secondes
-    const confirmDie = async () => {
-      try {
-        await fetch(`${API_BASE}?action=confirmDie`, {
+    // Auto-confirmer après 4 secondes
+    setTimeout(() => {
+      if (game.phase === 'die_result') {
+        fetch(`${API_BASE}?action=confirmDie`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ roomCode: currentRoom })
-        })
-      } catch (err) {
-        console.error('ConfirmDie error:', err)
+        }).catch(err => console.error('ConfirmDie error:', err))
       }
-    }
-
-    // Utiliser un timeout pour auto-confirmer (géré par le premier joueur qui le voit)
-    setTimeout(() => {
-      if (game.phase === 'die_result') {
-        confirmDie()
-      }
-    }, 3000)
+    }, 4000)
 
     return (
       <div className="game-board die-phase">
         <ConfirmExitModal />
         <div className="die-container">
-          <h2>🎲 Résultat du dé</h2>
+          {/* Les 4 couleurs avec celle sélectionnée mise en avant */}
           <div style={{
-            fontSize: '80px',
-            margin: '30px 0',
-            color: suitInfo?.color
+            display: 'flex',
+            gap: '20px',
+            justifyContent: 'center',
+            marginBottom: '30px'
+          }}>
+            {['spade', 'heart', 'diamond', 'club'].map((suit) => {
+              const info = SUIT_DISPLAY[suit]
+              const isSelected = suit === game.papayooSuit
+              return (
+                <div
+                  key={suit}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '20px 25px',
+                    background: isSelected ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '20px',
+                    border: isSelected ? `4px solid ${info.color}` : '3px solid rgba(255, 255, 255, 0.2)',
+                    opacity: isSelected ? 1 : 0.4,
+                    transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                    boxShadow: isSelected ? `0 0 40px ${info.color}80` : 'none',
+                    transition: 'all 0.5s ease',
+                    animation: isSelected ? 'winnerPulse 1s ease-in-out infinite' : 'none'
+                  }}
+                >
+                  <span style={{
+                    fontSize: '45px',
+                    color: info.color,
+                    filter: isSelected ? 'drop-shadow(0 0 15px currentColor)' : 'none'
+                  }}>{info.symbol}</span>
+                  <span style={{
+                    fontSize: '13px',
+                    color: isSelected ? info.color : 'rgba(255,255,255,0.5)',
+                    textTransform: 'uppercase',
+                    fontWeight: isSelected ? '700' : '600',
+                    letterSpacing: '1px'
+                  }}>{info.name}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          <h2 style={{
+            color: '#ffd700',
+            animation: 'resultBounce 0.6s ease-out'
+          }}>🎯 Le Payot est révélé!</h2>
+
+          <div style={{
+            fontSize: '120px',
+            margin: '20px 0',
+            color: suitInfo?.color,
+            animation: 'symbolReveal 0.8s ease-out',
+            filter: `drop-shadow(0 0 30px ${suitInfo?.color})`
           }}>
             {suitInfo?.symbol}
           </div>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: suitInfo?.color }}>
+
+          <p style={{
+            fontSize: '32px',
+            fontWeight: 'bold',
+            color: suitInfo?.color,
+            textShadow: `0 0 20px ${suitInfo?.color}80`,
+            animation: 'fadeIn 0.5s ease-out 0.3s both'
+          }}>
             {suitInfo?.name}
           </p>
-          <p className="die-instruction" style={{ marginTop: '20px' }}>
-            Le 7 de {suitInfo?.name} vaut 40 points !
-          </p>
+
+          <div style={{
+            marginTop: '25px',
+            padding: '15px 30px',
+            background: 'rgba(244, 67, 54, 0.2)',
+            border: '2px solid rgba(244, 67, 54, 0.5)',
+            borderRadius: '15px',
+            animation: 'warningAppear 0.5s ease-out 0.6s both'
+          }}>
+            <p style={{
+              fontSize: '18px',
+              color: '#ff6b6b',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              justifyContent: 'center'
+            }}>
+              <span>⚠️</span>
+              <span>Le 7{suitInfo?.symbol} vaut <strong style={{ color: '#ff4444', fontSize: '22px' }}>40 points</strong>!</span>
+            </p>
+          </div>
         </div>
+
+        <style>{`
+          @keyframes winnerPulse {
+            0%, 100% { 
+              box-shadow: 0 0 40px currentColor;
+              transform: scale(1.15);
+            }
+            50% { 
+              box-shadow: 0 0 60px currentColor;
+              transform: scale(1.2);
+            }
+          }
+          @keyframes resultBounce {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+          }
+          @keyframes symbolReveal {
+            0% { transform: scale(0) rotateY(180deg); opacity: 0; }
+            50% { transform: scale(1.3) rotateY(0deg); }
+            100% { transform: scale(1) rotateY(0deg); opacity: 1; }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes warningAppear {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+          }
+        `}</style>
       </div>
     )
   }
