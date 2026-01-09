@@ -741,42 +741,45 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
 
       {/* Zone de jeu principale */}
       <div className="game-content">
-        {/* Panneau gauche - Scores */}
+        {/* Panneau gauche - Scores et Joueurs */}
         <aside className="side-panel left">
           <ScoreBoard
             players={game.players}
             papayooSuit={game.papayooSuit}
             roundNumber={game.roundNumber}
           />
+
+          {/* Autres joueurs */}
+          <div className="opponents-section">
+            <h4 className="opponents-title">Joueurs</h4>
+            <div className="opponents-list">
+              {game.players.filter(p => p.id !== playerId).map((player, idx) => {
+                const playerIdx = game.players.findIndex(p => p.id === player.id)
+                return (
+                  <div
+                    key={player.id}
+                    className={`opponent-slot ${game.currentPlayer === playerIdx ? 'active' : ''}`}
+                  >
+                    <div className="opponent-cards">
+                      {[...Array(Math.min(player.hand?.filter(c => !c.hidden)?.length || 0, 6))].map((_, i) => (
+                        <div key={i} className="mini-card" style={{ '--i': i }} />
+                      ))}
+                    </div>
+                    <div className="opponent-info">
+                      <span className="opponent-name">{player.name}</span>
+                      <span className="opponent-card-count">
+                        {player.hand?.filter(c => !c.hidden)?.length || '?'} cartes
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </aside>
 
         {/* Zone centrale */}
         <main className="main-area">
-          {/* Autres joueurs */}
-          <div className="opponents-area">
-            {game.players.filter(p => p.id !== playerId).map((player, idx) => {
-              const playerIdx = game.players.findIndex(p => p.id === player.id)
-              return (
-                <div
-                  key={player.id}
-                  className={`opponent-slot ${game.currentPlayer === playerIdx ? 'active' : ''}`}
-                >
-                  <div className="opponent-cards">
-                    {[...Array(Math.min(player.hand?.filter(c => !c.hidden)?.length || 0, 6))].map((_, i) => (
-                      <div key={i} className="mini-card" style={{ '--i': i }} />
-                    ))}
-                  </div>
-                  <div className="opponent-info">
-                    <span className="opponent-name">{player.name}</span>
-                    <span className="opponent-card-count">
-                      {player.hand?.filter(c => !c.hidden)?.length || '?'} cartes
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
           {/* Espace réservé pour le message du gagnant du pli - hauteur fixe pour éviter le décalage */}
           <div style={{
             height: '50px',

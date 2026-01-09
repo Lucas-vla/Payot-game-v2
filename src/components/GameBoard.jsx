@@ -294,37 +294,40 @@ function GameBoard({ onBackToMenu }) {
 
       {/* Zone de jeu principale */}
       <div className="game-content">
-        {/* Panneau gauche - Scores */}
+        {/* Panneau gauche - Scores et Adversaires */}
         <aside className="side-panel left">
           <ScoreBoard
             players={players}
             papayooSuit={papayooSuit}
             roundNumber={roundNumber}
           />
+
+          {/* Adversaires */}
+          <div className="opponents-section">
+            <h4 className="opponents-title">Joueurs</h4>
+            <div className="opponents-list">
+              {players.filter(p => !p.isHuman).map(player => (
+                <div
+                  key={player.id}
+                  className={`opponent-slot ${currentPlayer === player.id ? 'active' : ''}`}
+                >
+                  <div className="opponent-cards">
+                    {[...Array(Math.min(player.hand.length, 6))].map((_, i) => (
+                      <div key={i} className="mini-card" style={{ '--i': i }} />
+                    ))}
+                  </div>
+                  <div className="opponent-info">
+                    <span className="opponent-name">{player.name}</span>
+                    <span className="opponent-card-count">{player.hand.length} cartes</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </aside>
 
         {/* Zone centrale */}
         <main className="main-area">
-          {/* Adversaires */}
-          <div className="opponents-area">
-            {players.filter(p => !p.isHuman).map(player => (
-              <div
-                key={player.id}
-                className={`opponent-slot ${currentPlayer === player.id ? 'active' : ''}`}
-              >
-                <div className="opponent-cards">
-                  {[...Array(Math.min(player.hand.length, 6))].map((_, i) => (
-                    <div key={i} className="mini-card" style={{ '--i': i }} />
-                  ))}
-                </div>
-                <div className="opponent-info">
-                  <span className="opponent-name">{player.name}</span>
-                  <span className="opponent-card-count">{player.hand.length} cartes</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* Plateau de jeu */}
           {phase === GAME_PHASES.PLAYING && (
             <TrickArea
