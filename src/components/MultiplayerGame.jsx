@@ -191,12 +191,12 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
   }
 
   // Lancer le dé
-  const handleRollDie = async (papayooSuit) => {
+  const handleRollDie = async () => {
     try {
       const response = await fetch(`${API_BASE}?action=rollDie`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode: currentRoom, papayooSuit })
+        body: JSON.stringify({ roomCode: currentRoom })
       })
       const data = await response.json()
       if (data.success) setGame(data.game)
