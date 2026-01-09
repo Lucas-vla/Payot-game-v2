@@ -11,7 +11,7 @@ import './GameBoard.css'  // Utiliser le même CSS que GameBoard
 
 const API_BASE = '/api/game'
 
-function MultiplayerGame({ onBackToMenu }) {
+function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
   const { currentRoom, playerId, roomData } = useMultiplayer()
   const [game, setGame] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -393,6 +393,25 @@ function MultiplayerGame({ onBackToMenu }) {
   // Fin de partie
   if (game.phase === 'game_end') {
     const winner = [...game.players].sort((a, b) => a.score - b.score)[0]
+
+    // Fonction pour retourner au lobby
+    const handleBackToLobby = async () => {
+      try {
+        const response = await fetch(`${API_BASE}?action=backToLobby`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomCode: currentRoom })
+        })
+        const data = await response.json()
+        if (data.success) {
+          // Rediriger vers le lobby - on va utiliser le callback du parent
+          onBackToLobby()
+        }
+      } catch (err) {
+        console.error('BackToLobby error:', err)
+      }
+    }
+
     return (
       <div className="game-board game-end">
         <ConfirmExitModal />
@@ -408,10 +427,14 @@ function MultiplayerGame({ onBackToMenu }) {
             papayooSuit={game.papayooSuit}
             roundNumber={game.roundNumber}
           />
-          <button className="restart-btn" onClick={onBackToMenu}>
-            <span>Retour au menu</span>
-            <span className="btn-icon">↺</span>
-          </button>
+          <div className="end-actions" style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '20px' }}>
+            <button className="restart-btn" onClick={handleBackToLobby} style={{ background: 'linear-gradient(135deg, #3949ab, #1a237e)' }}>
+              <span>🔄 Rejouer (Lobby)</span>
+            </button>
+            <button className="restart-btn" onClick={onBackToMenu} style={{ background: 'linear-gradient(135deg, #616161, #424242)' }}>
+              <span>🏠 Menu principal</span>
+            </button>
+          </div>
         </div>
       </div>
     )

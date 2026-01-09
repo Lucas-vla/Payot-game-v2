@@ -71,6 +71,43 @@ async function setGame(code, game) {
   memoryGames.set(code, game)
 }
 
+async function deleteGame(code) {
+  const client = await getRedisClient()
+  if (client && redisType === 'vercel') {
+    await client.del(`game:${code}`)
+    return
+  }
+  if (client && redisType === 'upstash') {
+    await client.del(`game:${code}`)
+    return
+  }
+  memoryGames.delete(code)
+}
+
+async function getRoom(code) {
+  const client = await getRedisClient()
+  if (client && redisType === 'vercel') {
+    const data = await client.get(`room:${code}`)
+    return data ? JSON.parse(data) : null
+  }
+  if (client && redisType === 'upstash') {
+    return await client.get(`room:${code}`)
+  }
+  return null
+}
+
+async function setRoom(code, room) {
+  const client = await getRedisClient()
+  if (client && redisType === 'vercel') {
+    await client.setEx(`room:${code}`, 86400, JSON.stringify(room))
+    return
+  }
+  if (client && redisType === 'upstash') {
+    await client.set(`room:${code}`, room, { ex: 86400 })
+    return
+  }
+}
+
 // ===== CONSTANTES DU JEU =====
 const SUITS = {
   SPADE: 'spade',
@@ -756,6 +793,33 @@ export default async function handler(req, res) {
 
         await setGame(code, game)
         return res.status(200).json({ success: true, game })
+      }
+
+      // Retourner au lobby (réinitialiser la room)
+      case 'backToLobby': {
+        if (req.method !== 'POST') {
+          return res.status(405).json({ error: 'Method not allowed' })
+        }
+
+        const { roomCode } = req.body
+        const code = roomCode?.toUpperCase().trim()
+
+        // Supprimer le jeu
+        await deleteGame(code)
+
+        // Récupérer et réinitialiser la room
+        const room = await getRoom(code)
+        if (room) {
+          room.status = 'waiting'
+          room.players = room.players.map(p => ({
+            ...p,
+            isReady: p.isHost // L'hôte reste prêt
+          }))
+          await setRoom(code, room)
+          return res.status(200).json({ success: true, room })
+        }
+
+        return res.status(404).json({ error: 'Room not found' })
       }
 
       default:

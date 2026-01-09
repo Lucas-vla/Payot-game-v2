@@ -158,9 +158,19 @@ function AppContent() {
       )
 
     case MODES.MULTIPLAYER:
+      // Fonction pour retourner au lobby après une partie
+      const handleBackToLobby = () => {
+        // Redémarrer le polling pour le lobby
+        multiplayer.startPolling(multiplayer.currentRoom)
+        setMode(MODES.LOBBY)
+      }
+
       return (
         <div className="app">
-          <MultiplayerGame onBackToMenu={handleBackToMenu} />
+          <MultiplayerGame
+            onBackToMenu={handleBackToMenu}
+            onBackToLobby={handleBackToLobby}
+          />
         </div>
       )
 
