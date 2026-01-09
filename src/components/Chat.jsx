@@ -171,7 +171,7 @@ function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle })
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Écrire un message..."
-              maxLength={500}
+              maxLength={200}
               autoComplete="off"
             />
             <button type="submit" disabled={!newMessage.trim()}>

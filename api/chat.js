@@ -44,11 +44,13 @@ async function getChat(roomCode) {
 
 async function setChat(roomCode, messages) {
   const client = await getRedisClient()
-  // Garder seulement les 100 derniers messages
-  const trimmedMessages = messages.slice(-100)
+  // Garder seulement les 30 derniers messages pour économiser Redis (30 MB gratuit)
+  // Un message fait environ 200-300 bytes, donc 30 messages = ~9KB par room
+  const trimmedMessages = messages.slice(-30)
 
   if (client && redisType === 'vercel') {
-    await client.setEx(`chat:${roomCode}`, 86400, JSON.stringify(trimmedMessages))
+    // Expiration après 6 heures (les parties ne durent pas éternellement)
+    await client.setEx(`chat:${roomCode}`, 21600, JSON.stringify(trimmedMessages))
     return
   }
   memoryChats.set(roomCode, trimmedMessages)
@@ -101,8 +103,8 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Missing required fields' })
         }
 
-        // Limiter la longueur du message
-        const trimmedMessage = message.trim().slice(0, 500)
+        // Limiter la longueur du message (200 chars max pour économiser de l'espace)
+        const trimmedMessage = message.trim().slice(0, 200)
 
         const messages = await getChat(code)
         const newMessage = {
