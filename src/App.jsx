@@ -8,6 +8,7 @@ import CreateRoom from './components/CreateRoom'
 import Lobby from './components/Lobby'
 import './App.css'
 
+// Version: 1.0.1 - Removed emote functionality
 // Modes de jeu
 const MODES = {
   MENU: 'menu',
