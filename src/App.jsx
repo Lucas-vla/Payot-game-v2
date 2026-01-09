@@ -89,8 +89,8 @@ function AppContent() {
   }
 
   // Créer la room
-  const handleCreateRoom = async (hostName, playerCount) => {
-    const code = await multiplayer.createRoom(hostName, playerCount)
+  const handleCreateRoom = async (hostName, playerCount, maxRounds) => {
+    const code = await multiplayer.createRoom(hostName, playerCount, maxRounds)
     if (code) {
       setMode(MODES.LOBBY)
     }

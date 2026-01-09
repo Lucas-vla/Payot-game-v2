@@ -4,6 +4,7 @@ import './CreateRoom.css'
 function CreateRoom({ onCreateRoom, onBack, playerName: initialName }) {
   const [playerName, setPlayerName] = useState(initialName || '')
   const [playerCount, setPlayerCount] = useState(4)
+  const [maxRounds, setMaxRounds] = useState(5)
   const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
@@ -13,7 +14,7 @@ function CreateRoom({ onCreateRoom, onBack, playerName: initialName }) {
       return
     }
     setError('')
-    onCreateRoom(playerName.trim(), playerCount)
+    onCreateRoom(playerName.trim(), playerCount, maxRounds)
   }
 
   return (
@@ -59,6 +60,34 @@ function CreateRoom({ onCreateRoom, onBack, playerName: initialName }) {
             </div>
             <span className="form-hint">
               Les places restantes seront remplies par des bots si nécessaire
+            </span>
+          </div>
+
+          <div className="form-group">
+            <label>Nombre de manches</label>
+            <div className="player-count-selector">
+              {[1, 3, 5, 10].map(rounds => (
+                <button
+                  key={rounds}
+                  type="button"
+                  className={maxRounds === rounds ? 'selected' : ''}
+                  onClick={() => setMaxRounds(rounds)}
+                >
+                  {rounds}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={maxRounds === 'infinite' ? 'selected' : ''}
+                onClick={() => setMaxRounds('infinite')}
+              >
+                ∞
+              </button>
+            </div>
+            <span className="form-hint">
+              {maxRounds === 'infinite'
+                ? 'Partie sans fin - jouez autant que vous voulez!'
+                : `La partie se terminera après ${maxRounds} manche${maxRounds > 1 ? 's' : ''}`}
             </span>
           </div>
 

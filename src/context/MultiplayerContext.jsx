@@ -92,7 +92,7 @@ export function MultiplayerProvider({ children }) {
   }, [stopPolling])
 
   // Créer une nouvelle partie
-  const createRoom = useCallback(async (hostName, playerCount) => {
+  const createRoom = useCallback(async (hostName, playerCount, maxRounds = 5) => {
     setIsLoading(true)
     setError(null)
 
@@ -108,7 +108,8 @@ export function MultiplayerProvider({ children }) {
         body: JSON.stringify({
           hostName,
           playerCount,
-          hostId: playerId
+          hostId: playerId,
+          maxRounds
         })
       })
 
