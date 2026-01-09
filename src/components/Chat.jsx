@@ -3,7 +3,7 @@ import './Chat.css'
 
 const CHAT_API = '/api/chat'
 
-function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle }) {
+function Chat({ roomCode, playerId, playerName, isMinimized = false }) {
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [isOpen, setIsOpen] = useState(!isMinimized)
@@ -11,11 +11,18 @@ function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle })
   const messagesEndRef = useRef(null)
   const lastTimestampRef = useRef(0)
   const pollingRef = useRef(null)
+  const isOpenRef = useRef(!isMinimized) // Ref pour éviter les problèmes de closure
+  const hasInitializedRef = useRef(false) // Pour ignorer les messages au premier chargement
 
   // Scroll vers le bas quand de nouveaux messages arrivent
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  // Mettre à jour la ref quand isOpen change
+  useEffect(() => {
+    isOpenRef.current = isOpen
+  }, [isOpen])
 
   // Récupérer les messages
   const fetchMessages = useCallback(async () => {
@@ -33,20 +40,31 @@ function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle })
           const existingIds = new Set(prev.map(m => m.id))
           const newMsgs = data.messages.filter(m => !existingIds.has(m.id))
           if (newMsgs.length > 0) {
-            // Incrémenter le compteur de non-lus si le chat est fermé
-            if (!isOpen) {
-              setUnreadCount(c => c + newMsgs.length)
+            // Incrémenter le compteur de non-lus seulement si :
+            // - Le chat est fermé
+            // - Ce n'est pas le chargement initial
+            // - Ce ne sont pas nos propres messages
+            if (hasInitializedRef.current && !isOpenRef.current) {
+              const otherPlayerMsgs = newMsgs.filter(m => m.playerId !== playerId)
+              if (otherPlayerMsgs.length > 0) {
+                setUnreadCount(c => c + otherPlayerMsgs.length)
+              }
             }
             return [...prev, ...newMsgs]
           }
           return prev
         })
         lastTimestampRef.current = data.lastTimestamp
+
+        // Marquer comme initialisé après le premier fetch
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true
+        }
       }
     } catch (err) {
       console.error('Chat fetch error:', err)
     }
-  }, [roomCode, isOpen])
+  }, [roomCode, playerId])
 
   // Démarrer le polling
   useEffect(() => {
@@ -62,7 +80,7 @@ function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle })
     }
   }, [roomCode, fetchMessages])
 
-  // Scroll quand de nouveaux messages arrivent
+  // Scroll quand de nouveaux messages arrivent et le chat est ouvert
   useEffect(() => {
     if (isOpen) {
       scrollToBottom()
@@ -111,8 +129,7 @@ function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle })
   }
 
   const toggleChat = () => {
-    setIsOpen(!isOpen)
-    if (onToggle) onToggle(!isOpen)
+    setIsOpen(prev => !prev)
   }
 
   // Formater l'heure
@@ -131,7 +148,7 @@ function Chat({ roomCode, playerId, playerName, isMinimized = false, onToggle })
             <span className="unread-badge">{unreadCount}</span>
           )}
         </span>
-        <button className="chat-toggle">
+        <button className="chat-toggle" type="button">
           {isOpen ? '▼' : '▲'}
         </button>
       </div>
