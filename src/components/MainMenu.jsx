@@ -49,8 +49,8 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
         {/* Logo */}
         <div className="menu-logo">
           <span className="logo-icon">🎴</span>
-          <h1>Papayoo</h1>
-          <p className="tagline">Le jeu de cartes où il faut éviter les points!</p>
+          <h1>Payot</h1>
+          <p className="tagline">Qui sera le Payot aujourd'hui?</p>
         </div>
 
         {!showJoinForm ? (
