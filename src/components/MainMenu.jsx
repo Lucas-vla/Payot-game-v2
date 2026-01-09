@@ -66,6 +66,7 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
               </button>
 
               <button className="menu-btn multi-btn" onClick={onCreateMultiplayer}>
+                <span className="btn-emoji">🎮</span>
                 <div className="btn-text">
                   <span className="btn-title">Créer une partie</span>
                   <span className="btn-desc">Invitez vos amis à jouer</span>

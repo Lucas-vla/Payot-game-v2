@@ -45,11 +45,11 @@ function Lobby({
 
     console.log('Sharing URL:', inviteUrl) // Debug
 
-    // Essayer de copier dans le presse-papier d'abord
+    // Copier dans le presse-papier
     try {
       await navigator.clipboard.writeText(inviteUrl)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), 3000)
     } catch (err) {
       // Fallback si clipboard ne marche pas
       const input = document.createElement('input')
@@ -59,21 +59,7 @@ function Lobby({
       document.execCommand('copy')
       document.body.removeChild(input)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-
-    // Si l'API de partage native est disponible, l'utiliser aussi
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Rejoins ma partie de Papayoo!',
-          text: `Rejoins ma partie de Papayoo!\nCode: ${roomCode}\nLien: ${inviteUrl}`,
-          url: inviteUrl
-        })
-      } catch (err) {
-        // L'utilisateur a annulé le partage ou erreur - pas grave, le lien est déjà copié
-        console.log('Share cancelled or failed:', err)
-      }
+      setTimeout(() => setCopied(false), 3000)
     }
   }
 
