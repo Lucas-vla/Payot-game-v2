@@ -59,9 +59,9 @@ function MultiplayerGame({ onBackToMenu }) {
   }, [fetchGameState])
 
   // État local pour afficher le dernier pli avec un délai
-  const [displayedTrick, setDisplayedTrick] = useState([])
+  const [showTrickResult, setShowTrickResult] = useState(false)
   const [trickWinnerMessage, setTrickWinnerMessage] = useState(null)
-  const lastTrickIdRef = useRef(null)
+  const lastTrickCompleteRef = useRef(false)
 
   // Appeler le serveur pour continuer après l'affichage du pli
   const continueAfterTrick = useCallback(async () => {
@@ -80,31 +80,28 @@ function MultiplayerGame({ onBackToMenu }) {
     }
   }, [currentRoom])
 
-  // Gérer l'affichage du dernier pli avec délai
+  // Gérer l'affichage du pli terminé avec délai
   useEffect(() => {
-    if (game?.lastTrick && game.lastTrick.length > 0) {
-      // Créer un ID unique pour ce pli
-      const trickId = game.lastTrick.map(t => t.card.id).join('-')
+    if (game?.trickComplete && !lastTrickCompleteRef.current) {
+      // Un nouveau pli est terminé
+      lastTrickCompleteRef.current = true
+      setShowTrickResult(true)
+      setTrickWinnerMessage(game.message)
 
-      if (trickId !== lastTrickIdRef.current) {
-        lastTrickIdRef.current = trickId
-        // Afficher le pli terminé
-        setDisplayedTrick(game.lastTrick)
-        setTrickWinnerMessage(game.message)
+      // Après 2 secondes, continuer le jeu
+      const timer = setTimeout(async () => {
+        setShowTrickResult(false)
+        setTrickWinnerMessage(null)
+        lastTrickCompleteRef.current = false
+        // Appeler le serveur pour vider le pli et faire jouer le bot si nécessaire
+        await continueAfterTrick()
+      }, 2000)
 
-        // Après 2 secondes, effacer l'affichage et continuer le jeu
-        const timer = setTimeout(async () => {
-          setDisplayedTrick([])
-          setTrickWinnerMessage(null)
-          lastTrickIdRef.current = null
-          // Appeler le serveur pour faire jouer le bot si nécessaire
-          await continueAfterTrick()
-        }, 2000)
-
-        return () => clearTimeout(timer)
-      }
+      return () => clearTimeout(timer)
+    } else if (!game?.trickComplete) {
+      lastTrickCompleteRef.current = false
     }
-  }, [game?.lastTrick, game?.message, continueAfterTrick])
+  }, [game?.trickComplete, game?.message, continueAfterTrick])
 
   // Trouver le joueur actuel
   const currentPlayerData = game?.players?.find(p => p.id === playerId)
@@ -403,14 +400,6 @@ function MultiplayerGame({ onBackToMenu }) {
     card: play.card
   })) || []
 
-  // Transformer displayedTrick (dernier pli terminé) pour l'affichage avec délai
-  const formattedDisplayedTrick = displayedTrick?.map(play => ({
-    playerId: game.players.findIndex(p => p.id === play.playerId),
-    card: play.card
-  })) || []
-
-  // Utiliser displayedTrick s'il y en a un, sinon currentTrick
-  const trickToShow = displayedTrick.length > 0 ? formattedDisplayedTrick : formattedTrick
 
   const papayooInfo = game.papayooSuit ? SUIT_DISPLAY[game.papayooSuit] : null
   const roundDisplay = game.maxRounds === 'infinite'
@@ -488,15 +477,15 @@ function MultiplayerGame({ onBackToMenu }) {
           {game.phase === 'playing' && (
             <>
               <TrickArea
-                currentTrick={trickToShow}
+                currentTrick={formattedTrick}
                 playerCount={game.playerCount}
                 papayooSuit={game.papayooSuit}
                 leadSuit={game.leadSuit}
                 onCardDrop={handleCardDrop}
-                isPlayerTurn={isMyTurn && displayedTrick.length === 0 && game.currentTrick.length < game.playerCount}
+                isPlayerTurn={isMyTurn && !game.trickComplete && game.currentTrick.length < game.playerCount}
               />
               {/* Message du gagnant du pli */}
-              {trickWinnerMessage && displayedTrick.length > 0 && (
+              {showTrickResult && trickWinnerMessage && (
                 <div className="trick-winner-message" style={{
                   textAlign: 'center',
                   marginTop: '15px',
@@ -554,11 +543,11 @@ function MultiplayerGame({ onBackToMenu }) {
         <aside className="side-panel right">
           {game.phase === 'playing' && (
             <div className="turn-info">
-              <h4>{displayedTrick.length > 0 ? 'Pli terminé' : 'Tour en cours'}</h4>
+              <h4>{showTrickResult ? 'Pli terminé' : 'Tour en cours'}</h4>
               <div className={`current-player ${isMyTurn ? 'is-you' : ''}`}>
                 <span className="player-indicator" />
-                <span>{game.players[game.currentPlayer]?.name}</span>
-                {isMyTurn && displayedTrick.length === 0 && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
+                <span>{showTrickResult ? game.players[game.trickWinner]?.name : game.players[game.currentPlayer]?.name}</span>
+                {isMyTurn && !showTrickResult && <span style={{ color: '#4caf50', marginLeft: '5px' }}>(vous)</span>}
               </div>
               {game.leadSuit && (
                 <div className="lead-suit-info">

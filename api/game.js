@@ -478,14 +478,22 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Not in playing phase' })
         }
 
-        // Effacer le lastTrick
-        game.lastTrick = null
-        game.lastTrickWinner = null
-        game.lastTrickTime = null
+        // Si le pli n'est pas marqué comme terminé, rien à faire
+        if (!game.trickComplete) {
+          return res.status(200).json({ success: true, game })
+        }
 
-        // Si c'est au tour d'un bot et que le pli est vide, le faire jouer
+        // Vider le pli et passer au joueur gagnant
+        game.currentTrick = []
+        game.leadSuit = null
+        game.currentPlayer = game.nextPlayer
+        game.trickComplete = false
+        game.trickWinner = null
+        game.nextPlayer = null
+
+        // Si c'est au tour d'un bot, le faire jouer
         const currentPlayer = game.players[game.currentPlayer]
-        if (currentPlayer.isBot && game.currentTrick.length === 0 && currentPlayer.hand.length > 0) {
+        if (currentPlayer.isBot && currentPlayer.hand.length > 0) {
           // Le bot ouvre le pli
           const botCard = selectBotCard(currentPlayer.hand, null, game.papayooSuit, [])
           currentPlayer.hand = currentPlayer.hand.filter(c => c.id !== botCard.id)
@@ -525,16 +533,17 @@ export default async function handler(req, res) {
               game.currentTrick = []
               game.leadSuit = null
             } else {
-              // Nouveau pli terminé à afficher
-              game.lastTrick = [...game.currentTrick]
-              game.lastTrickWinner = winnerIndex
-              game.lastTrickTime = Date.now()
-              game.currentTrick = []
-              game.leadSuit = null
-              game.currentPlayer = winnerIndex
+              // Nouveau pli terminé - garder les cartes visibles
+              game.trickComplete = true
+              game.trickWinner = winnerIndex
+              game.nextPlayer = winnerIndex
               game.message = `${game.players[winnerIndex].name} remporte le pli!`
             }
+          } else {
+            game.message = `C'est au tour de ${game.players[game.currentPlayer].name}`
           }
+        } else {
+          game.message = `C'est au tour de ${currentPlayer.name}`
         }
 
         game.lastUpdate = Date.now()
@@ -624,15 +633,13 @@ export default async function handler(req, res) {
             game.currentTrick = []
             game.leadSuit = null
           } else {
-            // Sauvegarder le pli pour affichage avec délai côté client
-            game.lastTrick = [...game.currentTrick]
-            game.lastTrickWinner = winnerIndex
-            game.lastTrickTime = Date.now()
-            game.currentTrick = []
-            game.leadSuit = null
-            game.currentPlayer = winnerIndex
+            // NE PAS vider currentTrick - garder les cartes visibles pour l'affichage
+            // Marquer le pli comme terminé avec le gagnant
+            game.trickComplete = true
+            game.trickWinner = winnerIndex
+            game.nextPlayer = winnerIndex
             game.message = `${game.players[winnerIndex].name} remporte le pli!`
-            // Ne PAS faire jouer le bot ici - attendre que le client appelle 'continueAfterTrick'
+            // Le client appellera 'continueAfterTrick' après le délai d'affichage
           }
         } else {
           // Joueur suivant
@@ -677,15 +684,11 @@ export default async function handler(req, res) {
                 game.currentTrick = []
                 game.leadSuit = null
               } else {
-                // Sauvegarder le pli pour affichage avec délai
-                game.lastTrick = [...game.currentTrick]
-                game.lastTrickWinner = winnerIndex
-                game.lastTrickTime = Date.now()
-                game.currentTrick = []
-                game.leadSuit = null
-                game.currentPlayer = winnerIndex
+                // NE PAS vider currentTrick - garder les cartes visibles
+                game.trickComplete = true
+                game.trickWinner = winnerIndex
+                game.nextPlayer = winnerIndex
                 game.message = `${game.players[winnerIndex].name} remporte le pli!`
-                // Ne PAS faire jouer le bot ici - attendre 'continueAfterTrick'
               }
             }
           }
