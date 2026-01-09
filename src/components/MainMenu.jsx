@@ -49,7 +49,7 @@ function MainMenu({ onPlayVsBot, onCreateMultiplayer, onJoinMultiplayer, apiErro
         {/* Logo */}
         <div className="menu-logo">
           <span className="logo-icon">🎴</span>
-          <h1>Payot</h1>
+          <h1>Le Payot</h1>
           <p className="tagline">Qui sera le Payot aujourd'hui?</p>
         </div>
 

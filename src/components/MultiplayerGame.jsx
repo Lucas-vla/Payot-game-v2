@@ -439,10 +439,10 @@ function MultiplayerGame({ onBackToMenu, onBackToLobby }) {
           />
           <div className="end-actions" style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '20px' }}>
             <button className="restart-btn" onClick={handleBackToLobby} style={{ background: 'linear-gradient(135deg, #3949ab, #1a237e)' }}>
-              <span>🔄 Rejouer (Lobby)</span>
+              <span>Rejouer </span>
             </button>
             <button className="restart-btn" onClick={onBackToMenu} style={{ background: 'linear-gradient(135deg, #616161, #424242)' }}>
-              <span>🏠 Menu principal</span>
+              <span>Menu principal</span>
             </button>
           </div>
         </div>
